@@ -51,3 +51,5 @@ export function getTokenRecordPda(mint: PublicKey, owner: PublicKey) {
 export function getTokenAccount(mint: PublicKey, owner: PublicKey) {
   return findAssociatedTokenPda(umi, { mint, owner })[0]
 }
+
+export const FEES_WALLET = publicKey("4dm8ndfR78PcQudJrS7TXM7R4qM3GAHpY87UtHnxovpa")

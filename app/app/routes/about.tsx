@@ -19,23 +19,35 @@ export default function About() {
           to royalty enforced pNFTs during the conversion period in 2023.
         </p>
         <p>
-          The program address is <Link href={`https://solscan.io/account/${metadata.address}`}>{metadata.address}</Link>
-        </p>
-        <p>
-          Winners are drawn using Switchboard's{" "}
-          <Link href="https://crates.io/crates/solana-randomness-service" target="_blank" rel="noreferrer">
-            Solana Randomness Service
+          The program address is{" "}
+          <Link
+            href={`https://solscan.io/account/${metadata.address}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-lg"
+          >
+            {metadata.address}
           </Link>{" "}
-          to ensure the results cannot be influenced by validators, or picked at a favourable time.
-        </p>
-        <p>Anyone can draw a raffle once the time is concluded, or all tickets are sold.</p>
-        <p>
-          Tickets can be purchased for SOL, SPL Tokens, or by sending specific NFTs which can be either burned on
-          purchase, or collected by the raffle organiser.
+          and the full open source code can be viewed on{" "}
+          <Link href="https://github.com/Xin-Dragons/convert" target="_blank" rel="noreferrer" className="text-lg">
+            Github
+          </Link>
         </p>
         <p>
-          <Title /> also supports NFT Gated Raffles, which can only be entered by holders of an NFT from a certain
-          collection. This service is offered free of charge {"<3"}
+          To prevent any malicious use, a converter can only be created by the Update Authority wallet. When a converter
+          is created, a new Metaplex Certified Collection NFT is minted into the Update Authority wallet to group all
+          newly minted pNFTs.{" "}
+        </p>
+        <p className="font-bold text-primary">
+          You will need to give the address of this new Collection NFT to marketplaces in order for the new items to be
+          listed as they are minted.
+        </p>
+        <p>
+          New pNFTs are minted with the default Metaplex rule set. If you wish to change this for a bespoke allow/deny
+          list, this can be done using Batch Update in the NFT Suite in{" "}
+          <Link href="https://biblio.tech/tools/nft-suite" target="_blank" rel="noreferrer" className="text-lg">
+            Biblio.tech
+          </Link>
         </p>
       </PanelCard>
     </Page>

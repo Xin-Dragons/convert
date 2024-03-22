@@ -15,10 +15,19 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::{state::Converter, ConvertError, METAPLEX_RULE_SET};
+use crate::{
+    state::{Converter, ProgramConfig},
+    ConvertError, FEES_WALLET, METAPLEX_RULE_SET,
+};
 
 #[derive(Accounts)]
 pub struct Convert<'info> {
+    #[account(
+        seeds = [b"program-config"],
+        bump = program_config.bump
+    )]
+    program_config: Account<'info, ProgramConfig>,
+
     #[account(
         seeds = [
             b"CONVERT",
@@ -27,8 +36,13 @@ pub struct Convert<'info> {
         bump = converter.bump,
     )]
     converter: Account<'info, Converter>,
+
+    #[account(mut, address = FEES_WALLET)]
+    fees_wallet: SystemAccount<'info>,
+
     #[account(mut)]
     nft_mint: Account<'info, Mint>,
+
     #[account(
         mut,
         seeds = [
@@ -42,9 +56,12 @@ pub struct Convert<'info> {
         has_one = update_authority
     )]
     nft_metadata: Box<Account<'info, MetadataAccount>>,
+
     update_authority: SystemAccount<'info>,
+
     #[account(mut)]
     master_edition: Box<Account<'info, MasterEditionAccount>>,
+
     #[account(
         mut,
         seeds = [
@@ -56,37 +73,49 @@ pub struct Convert<'info> {
         bump,
     )]
     collection_metadata: Box<Account<'info, MetadataAccount>>,
+
     #[account(
         mut,
         associated_token::mint = nft_mint,
         associated_token::authority = authority
     )]
     nft_source: Box<Account<'info, TokenAccount>>,
+
     #[account(mut)]
     new_mint: Signer<'info>,
+
     /// CHECK: account checked in CPI
     #[account(mut)]
     new_token: UncheckedAccount<'info>,
+
     /// CHECK: account created in CPI
     #[account(mut)]
     token_record: UncheckedAccount<'info>,
+
     /// CHECK: account created in CPI
     #[account(mut)]
     new_metadata: UncheckedAccount<'info>,
+
     /// CHECK: account created in CPI
     #[account(mut)]
     new_master_edition: UncheckedAccount<'info>,
+
     #[account(mut)]
     authority: Signer<'info>,
+
     /// CHECK: checked in CPI
     new_collection_mint: UncheckedAccount<'info>,
+
     /// CHECK: checked in cpi
     #[account(mut)]
     new_collection_metadata: UncheckedAccount<'info>,
+
     /// CHECK: checked in cpi
     collection_delegate_record: UncheckedAccount<'info>,
+
     /// CHECK: checked in cpi
     new_collection_master_edition: UncheckedAccount<'info>,
+
     metadata_program: Program<'info, Metadata>,
     system_program: Program<'info, System>,
     token_program: Program<'info, Token>,
@@ -129,7 +158,8 @@ impl<'info> Convert<'info> {
     }
 
     pub fn mint_pnft(&self) -> Result<()> {
-        let converter = &self.converter.to_account_info();
+        let converter_acc = &self.converter;
+        let converter = &converter_acc.to_account_info();
         let nft_metadata = &self.nft_metadata;
         let new_metadata = &self.new_metadata.to_account_info();
         let new_mint = &self.new_mint.to_account_info();
@@ -235,7 +265,9 @@ impl<'info> Convert<'info> {
             .sysvar_instructions(sysvar_instructions)
             .primary_sale_happened(true)
             .new_update_authority(collection_metadata.update_authority)
-            .rule_set(RuleSetToggle::Set(METAPLEX_RULE_SET))
+            .rule_set(RuleSetToggle::Set(
+                converter_acc.rule_set.unwrap_or(METAPLEX_RULE_SET),
+            ))
             .invoke_signed(&[&authority_seeds])?;
 
         VerifyCollectionV1CpiBuilder::new(&metadata_program)
@@ -254,7 +286,25 @@ impl<'info> Convert<'info> {
 }
 
 pub fn convert_handler(ctx: Context<Convert>) -> Result<()> {
+    let program_config = &ctx.accounts.program_config;
+    let fees_wallet = &ctx.accounts.fees_wallet;
     ctx.accounts.burn_nft()?;
     ctx.accounts.mint_pnft()?;
+
+    if program_config.convert_fee > 0 {
+        let ix = anchor_lang::solana_program::system_instruction::transfer(
+            &ctx.accounts.authority.key(),
+            &fees_wallet.key(),
+            program_config.convert_fee,
+        );
+
+        anchor_lang::solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.authority.to_account_info(),
+                fees_wallet.to_account_info(),
+            ],
+        )?;
+    }
     Ok(())
 }

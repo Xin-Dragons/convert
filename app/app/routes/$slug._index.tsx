@@ -12,7 +12,7 @@ import { getSysvar } from "@metaplex-foundation/mpl-toolbox"
 import { generateSigner, publicKey, transactionBuilder } from "@metaplex-foundation/umi"
 import { fromWeb3JsPublicKey, fromWeb3JsInstruction } from "@metaplex-foundation/umi-web3js-adapters"
 import { Button, Card, CardBody, CardHeader } from "@nextui-org/react"
-import { useOutletContext } from "@remix-run/react"
+import { useNavigate, useOutletContext } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DAS } from "helius-sdk"
 import { useEffect, useState } from "react"
@@ -46,6 +46,7 @@ export default function Convert() {
   const [loading, setLoading] = useState(false)
   const [pnft, setPnft] = useState<DigitalAssetWithJson | null>(null)
   const wallet = useWallet()
+  const navigate = useNavigate()
   const umi = useUmi()
 
   useEffect(() => {
@@ -115,7 +116,7 @@ export default function Convert() {
 
       toast.promise(promise, {
         loading: "Converting NFT",
-        success: "NFT converted successfully",
+        success: "NFT converted successfully!",
         error: (err) => displayErrorFromLog(err, "Error converting NFT"),
       })
 
@@ -166,6 +167,7 @@ export default function Convert() {
       })
 
       await promise
+      navigate("/")
     } catch (err) {
       console.error(err)
     } finally {

@@ -39,7 +39,10 @@
           "name": "collectionDelegateRecord",
           "isMut": true,
           "isSigner": false,
-          "docs": ["Metadata delegate record. The delegate is used to verify NFTs.", ""]
+          "docs": [
+            "Metadata delegate record. The delegate is used to verify NFTs.",
+            ""
+          ]
         },
         {
           "name": "authority",
@@ -57,24 +60,39 @@
           "isSigner": false
         },
         {
+          "name": "ruleSet",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
           "name": "sysvarInstructions",
           "isMut": false,
           "isSigner": false,
-          "docs": ["Instructions sysvar account.", ""]
+          "docs": [
+            "Instructions sysvar account.",
+            ""
+          ]
         },
         {
           "name": "authorizationRulesProgram",
           "isMut": false,
           "isSigner": false,
           "isOptional": true,
-          "docs": ["Token Authorization Rules program.", ""]
+          "docs": [
+            "Token Authorization Rules program.",
+            ""
+          ]
         },
         {
           "name": "authorizationRules",
           "isMut": false,
           "isSigner": false,
           "isOptional": true,
-          "docs": ["Token Authorization rules account for the collection metadata (if any).", ""]
+          "docs": [
+            "Token Authorization rules account for the collection metadata (if any).",
+            ""
+          ]
         }
       ],
       "args": [
@@ -104,8 +122,18 @@
       "name": "convert",
       "accounts": [
         {
+          "name": "programConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "converter",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "feesWallet",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -297,58 +325,87 @@
         "fields": [
           {
             "name": "authority",
-            "docs": ["authority wallet (32)"],
+            "docs": [
+              "authority wallet (32)"
+            ],
             "type": "publicKey"
           },
           {
             "name": "slug",
-            "docs": ["slug, max 50 chars (4 + 50)"],
+            "docs": [
+              "slug, max 50 chars (4 + 50)"
+            ],
             "type": "string"
           },
           {
             "name": "name",
-            "docs": ["name of the project, max 50 chars (4 + 50)"],
+            "docs": [
+              "name of the project, max 50 chars (4 + 50)"
+            ],
             "type": "string"
           },
           {
             "name": "sourceCollection",
-            "docs": ["metaplex collection (32)"],
+            "docs": [
+              "metaplex collection (32)"
+            ],
             "type": "publicKey"
           },
           {
             "name": "destinationCollection",
-            "docs": ["new collection (32)"],
+            "docs": [
+              "new collection (32)"
+            ],
             "type": "publicKey"
           },
           {
+            "name": "ruleSet",
+            "docs": [
+              "optional ruleset, defaults to metaplex (1 + 32)"
+            ],
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
             "name": "active",
-            "docs": ["is the converter active (1)"],
+            "docs": [
+              "is the converter active (1)"
+            ],
             "type": "bool"
           },
           {
             "name": "logo",
-            "docs": ["optional logo (1 + 4 + 52)"],
+            "docs": [
+              "optional logo (1 + 4 + 52)"
+            ],
             "type": {
               "option": "string"
             }
           },
           {
             "name": "bg",
-            "docs": ["optional bg (1 + 4 + 52)"],
+            "docs": [
+              "optional bg (1 + 4 + 52)"
+            ],
             "type": {
               "option": "string"
             }
           },
           {
             "name": "customDomain",
-            "docs": ["optional custom domain, max 50 chars (1 + 4 + 50),"],
+            "docs": [
+              "optional custom domain, max 50 chars (1 + 4 + 50),"
+            ],
             "type": {
               "option": "string"
             }
           },
           {
             "name": "bump",
-            "docs": ["the bump of the converter (1)"],
+            "docs": [
+              "the bump of the converter (1)"
+            ],
             "type": "u8"
           }
         ]
@@ -361,19 +418,25 @@
         "fields": [
           {
             "name": "convertFee",
-            "docs": ["the amount in sol to convert (8)"],
+            "docs": [
+              "the amount in sol to convert (8)"
+            ],
             "type": "u64"
           },
           {
             "name": "slugs",
-            "docs": ["a vector storing all slugs (4)"],
+            "docs": [
+              "a vector storing all slugs (4)"
+            ],
             "type": {
               "vec": "string"
             }
           },
           {
             "name": "bump",
-            "docs": ["the bump of the program_config account (1)"],
+            "docs": [
+              "the bump of the program_config account (1)"
+            ],
             "type": "u8"
           }
         ]
@@ -445,6 +508,11 @@
       "code": 6012,
       "name": "AdminOnly",
       "msg": "This is an admin only action"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidRuleSet",
+      "msg": "Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset"
     }
   ],
   "metadata": {

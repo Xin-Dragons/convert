@@ -6,6 +6,7 @@ mod state;
 use instructions::*;
 
 pub const METAPLEX_RULE_SET: Pubkey = pubkey!("eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9");
+pub const FEES_WALLET: Pubkey = pubkey!("4dm8ndfR78PcQudJrS7TXM7R4qM3GAHpY87UtHnxovpa");
 
 declare_id!("CNVRTNSn2fcmaVKRYRyXHFQaASXXDf1kvewfqTotve9c");
 
@@ -66,4 +67,6 @@ pub enum ConvertError {
     BgTooLong,
     #[msg("This is an admin only action")]
     AdminOnly,
+    #[msg("Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset")]
+    InvalidRuleSet,
 }

@@ -78,6 +78,9 @@ pub struct Init<'info> {
 
     token_metadata_program: Program<'info, Metadata>,
 
+    #[account(owner = MPL_TOKEN_AUTH_RULES_PROGRAM @ ConvertError::InvalidRuleSet)]
+    rule_set: Option<UncheckedAccount<'info>>,
+
     /// Instructions sysvar account.
     ///
     /// CHECK: account constraint checked in account trait
@@ -164,6 +167,10 @@ pub fn init_handler(
         ctx.accounts.authority.key(),
         ctx.accounts.source_collection_mint.key(),
         ctx.accounts.destination_collection_mint.key(),
+        ctx.accounts
+            .rule_set
+            .as_ref()
+            .map(|rule_set| rule_set.key()),
         ctx.bumps.converter,
     );
     Ok(())

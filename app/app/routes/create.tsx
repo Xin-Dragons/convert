@@ -71,6 +71,8 @@ export default function Create() {
   const [collectionError, setCollectionError] = useState<string | null>(null)
   const [slugError, setSlugError] = useState<null | string>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [ruleSet, setRuleSet] = useState("")
+  const [ruleSetError, setRuleSetError] = useState<string | null>(null)
   const [bgFile, setBgFile] = useState<File | null>(null)
   const navigate = useNavigate()
 
@@ -133,6 +135,7 @@ export default function Create() {
                   destinationCollectionMint: destinationCollection.publicKey,
                   destinationCollectionMetadata: findMetadataPda(umi, { mint: destinationCollection.publicKey })[0],
                   collectionDelegateRecord,
+                  ruleSet: ruleSet || null,
                   tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
                   sysvarInstructions: getSysvar("instructions"),
                   authorizationRulesProgram: MPL_TOKEN_AUTH_RULES_PROGRAM_ID,
@@ -214,6 +217,32 @@ export default function Create() {
   }, [collectionPk])
 
   useEffect(() => {
+    if (!ruleSet) {
+      setRuleSetError(null)
+      return
+    }
+    ;(async () => {
+      try {
+        const ruleSetPk = publicKey(ruleSet)
+        const acc = await umi.rpc.getAccount(ruleSetPk)
+        if (!acc.exists) {
+          throw new Error("Account not found")
+        }
+        if (acc.owner !== MPL_TOKEN_AUTH_RULES_PROGRAM_ID) {
+          throw new Error("Invalid ruleset account")
+        }
+        setRuleSetError(null)
+      } catch (err: any) {
+        if (err.message.includes("The provided public key is invalid")) {
+          setRuleSetError("Invalid public key")
+        } else {
+          setRuleSetError(err.message || "Invalid ruleset")
+        }
+      }
+    })()
+  }, [ruleSet])
+
+  useEffect(() => {
     setSlug(name.replaceAll(" ", "_").replaceAll("-", "_").replaceAll("__", "_").toLowerCase())
   }, [name])
 
@@ -222,14 +251,17 @@ export default function Create() {
     setSlug("")
     setBgFile(null)
     setLogoFile(null)
+    setCollectionPk("")
+    setCollection(null)
+    setRuleSet("")
   }
-
-  const isDirty = name || slug || logoFile || bgFile
-  const canSubmit = name && slug && !slugError
 
   if (!wallet.publicKey) {
     return <ErrorMessage title="Wallet disconnected" />
   }
+
+  const isDirty = name || slug || logoFile || bgFile || collection || ruleSet
+  const canSubmit = name && slug && collection && !slugError && !collectionError && (!ruleSet || !ruleSetError)
 
   return (
     <div className="h-full flex flex-col gap-4 ">
@@ -275,7 +307,7 @@ export default function Create() {
           </div>
 
           <Input
-            label="MCC"
+            label="Metaplex Certified Collection"
             value={collectionPk}
             onValueChange={setCollectionPk}
             variant="bordered"
@@ -301,6 +333,39 @@ export default function Create() {
                       </NextUiLink>
                     </p>
                   </div>
+                }
+              />
+            }
+          />
+
+          <Input
+            label="Rule set"
+            value={ruleSet}
+            onValueChange={setRuleSet}
+            variant="bordered"
+            errorMessage={ruleSetError}
+            description="Leave blank to use the default Metaplex managed ruleset"
+            endContent={
+              <Popover
+                title="Rule Set"
+                placement="left"
+                large
+                content={
+                  <p>
+                    Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific programs
+                    or accounts. Leave blank to assign the default Metaplex rule set
+                    <br />
+                    <br />
+                    You can create a new ruleset using{" "}
+                    <NextUiLink
+                      href="https://royalties.metaplex.com/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs"
+                    >
+                      Metaplex's royalty tool
+                    </NextUiLink>
+                  </p>
                 }
               />
             }

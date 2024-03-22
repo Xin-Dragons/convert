@@ -12,6 +12,8 @@ pub struct Converter {
     pub source_collection: Pubkey,
     /// new collection (32)
     pub destination_collection: Pubkey,
+    /// optional ruleset, defaults to metaplex (1 + 32)
+    pub rule_set: Option<Pubkey>,
     /// is the converter active (1)
     pub active: bool,
     /// optional logo (1 + 4 + 52)
@@ -25,8 +27,18 @@ pub struct Converter {
 }
 
 impl Converter {
-    pub const LEN: usize =
-        8 + 32 + (4 + 50) + (4 + 50) + 32 + 32 + 1 + (1 + 4 + 52) + (1 + 4 + 52) + (1 + 4 + 50) + 1;
+    pub const LEN: usize = 8
+        + 32
+        + (4 + 50)
+        + (4 + 50)
+        + 32
+        + 32
+        + (1 + 32)
+        + 1
+        + (1 + 4 + 52)
+        + (1 + 4 + 52)
+        + (1 + 4 + 50)
+        + 1;
 
     pub fn init(
         name: String,
@@ -36,6 +48,7 @@ impl Converter {
         authority: Pubkey,
         source_collection: Pubkey,
         destination_collection: Pubkey,
+        rule_set: Option<Pubkey>,
         bump: u8,
     ) -> Self {
         Self {
@@ -48,6 +61,7 @@ impl Converter {
             source_collection,
             destination_collection,
             active: false,
+            rule_set,
             bump,
         }
     }

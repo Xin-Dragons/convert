@@ -8,7 +8,8 @@ import { findProgramConfigPda, findProgramDataAddress } from "./helpers/pdas"
 anchor.setProvider(anchor.AnchorProvider.env())
 export const adminProgram = anchor.workspace.Convert as anchor.Program<Convert>
 
-export const CONVERT_FEE = sol(0.01).basisPoints
+export const CONVERT_FEE = sol(0.015).basisPoints
+export const MINTING_FEE = sol(0.01).basisPoints
 
 before(async () => {
   await adminProgram.methods

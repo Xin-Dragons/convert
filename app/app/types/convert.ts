@@ -60,6 +60,12 @@ export type Convert = {
           "isSigner": false
         },
         {
+          "name": "ruleSet",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
           "name": "sysvarInstructions",
           "isMut": false,
           "isSigner": false,
@@ -116,8 +122,18 @@ export type Convert = {
       "name": "convert",
       "accounts": [
         {
+          "name": "programConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "converter",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "feesWallet",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -343,6 +359,15 @@ export type Convert = {
             "type": "publicKey"
           },
           {
+            "name": "ruleSet",
+            "docs": [
+              "optional ruleset, defaults to metaplex (1 + 32)"
+            ],
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
             "name": "active",
             "docs": [
               "is the converter active (1)"
@@ -483,6 +508,11 @@ export type Convert = {
       "code": 6012,
       "name": "AdminOnly",
       "msg": "This is an admin only action"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidRuleSet",
+      "msg": "Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset"
     }
   ]
 };
@@ -549,6 +579,12 @@ export const IDL: Convert = {
           "isSigner": false
         },
         {
+          "name": "ruleSet",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
           "name": "sysvarInstructions",
           "isMut": false,
           "isSigner": false,
@@ -605,8 +641,18 @@ export const IDL: Convert = {
       "name": "convert",
       "accounts": [
         {
+          "name": "programConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "converter",
           "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "feesWallet",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -832,6 +878,15 @@ export const IDL: Convert = {
             "type": "publicKey"
           },
           {
+            "name": "ruleSet",
+            "docs": [
+              "optional ruleset, defaults to metaplex (1 + 32)"
+            ],
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
             "name": "active",
             "docs": [
               "is the converter active (1)"
@@ -972,6 +1027,11 @@ export const IDL: Convert = {
       "code": 6012,
       "name": "AdminOnly",
       "msg": "This is an admin only action"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidRuleSet",
+      "msg": "Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset"
     }
   ]
 };

@@ -10,13 +10,14 @@ import {
   findMetadataPda,
 } from "@metaplex-foundation/mpl-token-metadata"
 import {
+  FEES_WALLET,
   findConverterPda,
   findMetadataDelegateRecord,
   findProgramConfigPda,
   getTokenAccount,
   getTokenRecordPda,
 } from "./helpers/pdas"
-import { adminProgram, createNewUser, programPaidBy } from "./helper"
+import { CONVERT_FEE, MINTING_FEE, adminProgram, createNewUser, programPaidBy } from "./helper"
 import { createNft } from "./helpers/create-nft"
 import { getSysvar } from "@metaplex-foundation/mpl-toolbox"
 import { MPL_TOKEN_AUTH_RULES_PROGRAM_ID } from "@metaplex-foundation/mpl-token-auth-rules"
@@ -84,6 +85,7 @@ describe("converter", () => {
             destinationCollectionMint: destinationCollection.publicKey,
             destinationCollectionMetadata: destinationCollection.metadata.publicKey,
             collectionDelegateRecord,
+            ruleSet: null,
             tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
             sysvarInstructions: getSysvar("instructions"),
             authorizationRulesProgram: MPL_TOKEN_AUTH_RULES_PROGRAM_ID,
@@ -91,6 +93,31 @@ describe("converter", () => {
           })
           .rpc(),
       (err) => assertErrorCode(err, "UnauthorisedUA")
+    )
+  })
+
+  it("Cannot create a converter with an invalid ruleset", async () => {
+    const invalidRuleSet = await createCollection(umi)
+    await expectFail(
+      () =>
+        adminProgram.methods
+          .init("Test project", "test_project", "12345", "12345")
+          .accounts({
+            programConfig: findProgramConfigPda(),
+            converter,
+            sourceCollectionMint: sourceCollection.publicKey,
+            sourceCollectionMetadata: sourceCollection.metadata.publicKey,
+            destinationCollectionMint: destinationCollection.publicKey,
+            destinationCollectionMetadata: destinationCollection.metadata.publicKey,
+            collectionDelegateRecord,
+            ruleSet: invalidRuleSet.publicKey,
+            tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+            sysvarInstructions: getSysvar("instructions"),
+            authorizationRulesProgram: MPL_TOKEN_AUTH_RULES_PROGRAM_ID,
+            authorizationRules: unwrapOptionRecursively(destinationCollection.metadata.programmableConfig).ruleSet,
+          })
+          .rpc(),
+      (err) => assertErrorCode(err, "InvalidRuleSet")
     )
   })
 
@@ -105,6 +132,7 @@ describe("converter", () => {
         destinationCollectionMint: destinationCollection.publicKey,
         destinationCollectionMetadata: destinationCollection.metadata.publicKey,
         collectionDelegateRecord,
+        ruleSet: null,
         tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
         sysvarInstructions: getSysvar("instructions"),
         authorizationRulesProgram: MPL_TOKEN_AUTH_RULES_PROGRAM_ID,
@@ -136,6 +164,8 @@ describe("converter", () => {
           .convert()
           .accounts({
             converter,
+            programConfig: findProgramConfigPda(),
+            feesWallet: FEES_WALLET,
             nftMint: invalidNft.publicKey,
             nftMetadata: invalidNft.metadata.publicKey,
             updateAuthority: invalidNft.metadata.updateAuthority,
@@ -170,6 +200,8 @@ describe("converter", () => {
       .convert()
       .accounts({
         converter,
+        programConfig: findProgramConfigPda(),
+        feesWallet: FEES_WALLET,
         nftMint: nft.publicKey,
         nftMetadata: nft.metadata.publicKey,
         updateAuthority: nft.metadata.updateAuthority,
@@ -218,7 +250,7 @@ describe("converter", () => {
     const mintTokenRent = await umi.rpc.getBalance(newMint.publicKey)
     assert.equal(
       userBalBefore.basisPoints - userBalAfter.basisPoints,
-      sol(0.01).basisPoints + tokenRecordRent.basisPoints + mintTokenRent.basisPoints + 5000n * 2n,
+      MINTING_FEE + CONVERT_FEE + tokenRecordRent.basisPoints + mintTokenRent.basisPoints + 5000n * 2n,
       "Expected to pay 0.01 sol MP fee, tokenRecord rent, new mint rent, and 2x tx fee"
     )
     const newCollectionAccount = await fetchDigitalAsset(umi, destinationCollection.publicKey)
