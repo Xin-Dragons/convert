@@ -10,6 +10,7 @@ export enum PriorityFees {
 }
 
 export const adminWallet = publicKey("9YjXACMG9MJ6EW9cXneUh5nfc48nUBbwb5DQkhx6qEcY")
+export const FEES_WALLET = publicKey("4dm8ndfR78PcQudJrS7TXM7R4qM3GAHpY87UtHnxovpa")
 
 export const MAX_TX_SIZE = 1232
 export const PRIORITY_FEE_IX_SIZE = 44

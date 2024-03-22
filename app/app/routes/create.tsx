@@ -261,7 +261,7 @@ export default function Create() {
   }
 
   const isDirty = name || slug || logoFile || bgFile || collection || ruleSet
-  const canSubmit = name && slug && collection && !slugError && !collectionError && (!ruleSet || !ruleSetError)
+  const canSubmit = name && slug && collection && !slugError && !collectionError && !ruleSetError
 
   return (
     <div className="h-full flex flex-col gap-4 ">

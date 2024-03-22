@@ -34,6 +34,7 @@ pub struct Convert<'info> {
             converter.source_collection.as_ref(),
         ],
         bump = converter.bump,
+        constraint = converter.active @ ConvertError::ConverterInactive
     )]
     converter: Account<'info, Converter>,
 

@@ -5,7 +5,7 @@ import { Link, Outlet, useLoaderData, useLocation } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { displayErrorFromLog, getConverterFromSlug, packTx, sendAllTxsWithRetries } from "~/helpers"
 import { useTheme } from "~/context/theme"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { usePriorityFees } from "~/context/priority-fees"
 
 import { useUmi } from "~/context/umi"
@@ -26,6 +26,9 @@ import { getSysvar } from "@metaplex-foundation/mpl-toolbox"
 import toast from "react-hot-toast"
 import { NftSelector } from "~/components/NftSelector"
 import { DigitalAssetsProvider } from "~/context/digital-assets"
+import { Switch } from "@nextui-org/react"
+import { adminWallet } from "~/constants"
+import { Popover } from "~/components/Popover"
 
 export const meta: MetaFunction = ({ data }: { data: any }) => {
   return [{ title: `${data.name ? data.name + " " : ""} // RAFFLE` }]
@@ -75,53 +78,67 @@ export default function Converter() {
   const { pathname } = useLocation()
   const data = useLoaderData<typeof loader>()
   const convertProgram = useConvert()
-  const converter: ConverterWithPublicKey | null = !data.all
-    ? {
-        publicKey: new anchor.web3.PublicKey(data.converter.publicKey),
-        account: convertProgram.coder.accounts.decode("converter", Buffer.from(data.converter.account)),
-      }
-    : null
+  const [converter, setConverter] = useState<ConverterWithPublicKey>({
+    publicKey: new anchor.web3.PublicKey(data.converter.publicKey),
+    account: convertProgram.coder.accounts.decode("converter", Buffer.from(data.converter.account)),
+  })
+
   const wallet = useWallet()
+
+  useEffect(() => {
+    if (!converter) {
+      return
+    }
+    async function fetchConverter() {
+      const acc = await convertProgram.account.converter.fetch(converter!.publicKey)
+      setConverter({
+        publicKey: converter?.publicKey,
+        account: acc,
+      })
+    }
+    const id = convertProgram.provider.connection.onAccountChange(converter.publicKey, fetchConverter)
+    return () => {
+      convertProgram.provider.connection.removeAccountChangeListener(id)
+    }
+  }, [converter?.publicKey.toBase58()])
 
   const isAdmin = wallet.publicKey?.toBase58() === converter?.account.authority.toBase58()
 
-  // async function toggleActive(active: boolean) {
-  //   try {
-  //     setLoading(true)
-  //     const promise = Promise.resolve().then(async () => {
-  //       const tx = transactionBuilder().add({
-  //         instruction: fromWeb3JsInstruction(
-  //           await convertProgram.methods
-  //             .toggleActive(active)
-  //             .accounts({
-  //               converter: converter?.publicKey,
-  //               programData: findProgramDataAddress(),
-  //               program: convertProgram.programId,
-  //             })
-  //             .instruction()
-  //         ),
-  //         bytesCreatedOnChain: 0,
-  //         signers: [umi.identity],
-  //       })
+  async function toggleActive(active: boolean) {
+    try {
+      setLoading(true)
+      const promise = Promise.resolve().then(async () => {
+        const tx = transactionBuilder().add({
+          instruction: fromWeb3JsInstruction(
+            await convertProgram.methods
+              .toggleActive(active)
+              .accounts({
+                converter: converter?.publicKey,
+              })
+              .instruction()
+          ),
+          bytesCreatedOnChain: 0,
+          signers: [umi.identity],
+        })
 
-  //       const { chunks, txFee } = await packTx(umi, tx, feeLevel)
-  //       const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
-  //       return await sendAllTxsWithRetries(umi, convertProgram.provider.connection, signed, txFee ? 1 : 0)
-  //     })
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
+        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
+        return await sendAllTxsWithRetries(umi, convertProgram.provider.connection, signed, txFee ? 1 : 0)
+      })
 
-  //     toast.promise(promise, {
-  //       loading: active ? "Enabling converter" : "Disabling converter",
-  //       success: "Success",
-  //       error: (err) => displayErrorFromLog(err, "Error disabling raffle"),
-  //     })
+      toast.promise(promise, {
+        loading: active ? "Enabling converter" : "Disabling converter",
+        success: "Success",
+        error: (err) => displayErrorFromLog(err, "Error disabling converter"),
+      })
 
-  //     await promise
-  //   } catch (err) {
-  //     console.error(err)
-  //   } finally {
-  //     setLoading(false)
-  //   }
-  // }
+      await promise
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="h-full flex flex-col gap-4 ">
@@ -135,21 +152,21 @@ export default function Converter() {
             )}
           </Link>
 
-          {/* {(isAdmin || wallet.publicKey?.toBase58()) === adminWallet && pathname.includes("/admin") && (
+          {(isAdmin || wallet.publicKey?.toBase58() === adminWallet) && (
             <div className="flex items-center gap-1">
               <Switch
-                checked={converter.account.isActive}
+                isSelected={converter.account.active}
                 onValueChange={(checked) => toggleActive(checked)}
                 isDisabled={loading}
               />
               <p>Active</p>
               <Popover
-                title="converter active"
-                content="Check this toggle to display converter on public homepage"
+                title={`Converter ${converter.account.active ? "active" : "inactive"}`}
+                content={`Flip this toggle to ${converter.account.active ? "disable" : "enable"} converter`}
                 placement="left"
               />
             </div>
-          )} */}
+          )}
         </div>
       )}
 

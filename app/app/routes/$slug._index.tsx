@@ -18,7 +18,7 @@ import { DAS } from "helius-sdk"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { NftSelector } from "~/components/NftSelector"
-import { adminWallet } from "~/constants"
+import { FEES_WALLET, adminWallet } from "~/constants"
 import { useConvert } from "~/context/convert"
 import { useDigitalAssets } from "~/context/digital-assets"
 import { usePriorityFees } from "~/context/priority-fees"
@@ -83,6 +83,8 @@ export default function Convert() {
             await convertProgram.methods
               .convert()
               .accounts({
+                programConfig: findProgramConfigPda(umi),
+                feesWallet: FEES_WALLET,
                 converter: converter.publicKey,
                 nftMint: toBurnDa.publicKey,
                 nftMetadata: toBurnDa.metadata.publicKey,

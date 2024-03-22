@@ -37,6 +37,10 @@ pub mod convert {
     pub fn delete_converter(ctx: Context<DeleteConverter>) -> Result<()> {
         delete_converter_handler(ctx)
     }
+
+    pub fn toggle_active(ctx: Context<ToggleActive>, active: bool) -> Result<()> {
+        toggle_active_handler(ctx, active)
+    }
 }
 
 #[error_code]
@@ -69,4 +73,6 @@ pub enum ConvertError {
     AdminOnly,
     #[msg("Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset")]
     InvalidRuleSet,
+    #[msg("This converter is currently inactive")]
+    ConverterInactive,
 }

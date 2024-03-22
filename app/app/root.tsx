@@ -89,7 +89,6 @@ export default function App() {
 
   let childRoute = matches.find((match: any) => match.data !== null && "theme" in match.data)
   const theme = (childRoute?.data as any)?.theme
-  console.log({ theme })
 
   return (
     <html lang="en" className="bg-black">
@@ -196,9 +195,14 @@ function Layout({ children }: PropsWithChildren) {
                 <Title app="Stake" />
               </Link>
             </NavbarMenuItem>
+            <NavbarMenuItem>
+              <Link to="http://raffle.xinlabs.io" className={cn("w-full")} target="_blank" rel="noreferrer">
+                <Title app="Raffle" />
+              </Link>
+            </NavbarMenuItem>
           </div>
 
-          <div className="flex items-center gap-2 absolute bottom-5">
+          <div className="flex items-center gap-2 absolute bottom-6">
             <p className="text-[8px] text-nowrap">powered by</p>
             <Link to="https://xinlabs.io" target="_blank" rel="noreferrer">
               <PoweredBy className="h-4 fill-white" />

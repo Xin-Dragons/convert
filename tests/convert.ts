@@ -144,6 +144,48 @@ describe("converter", () => {
     assert.equal(delegate.delegate, converter, "Expected converter to be the delegate")
   })
 
+  it("Cannot convert while inactive", async () => {
+    const newMint = generateSigner(umi)
+    await expectFail(
+      () =>
+        userProgram.methods
+          .convert()
+          .accounts({
+            converter,
+            programConfig: findProgramConfigPda(),
+            feesWallet: FEES_WALLET,
+            nftMint: nft.publicKey,
+            nftMetadata: nft.metadata.publicKey,
+            updateAuthority: nft.metadata.updateAuthority,
+            masterEdition: nft.edition.publicKey,
+            collectionMetadata: sourceCollection.metadata.publicKey,
+            nftSource: getTokenAccount(nft.publicKey, user.publicKey),
+            newMint: newMint.publicKey,
+            authority: user.publicKey,
+            newToken: getTokenAccount(newMint.publicKey, user.publicKey),
+            tokenRecord: getTokenRecordPda(newMint.publicKey, user.publicKey),
+            newMetadata: findMetadataPda(umi, { mint: newMint.publicKey })[0],
+            newMasterEdition: findMasterEditionPda(umi, { mint: newMint.publicKey })[0],
+            newCollectionMint: destinationCollection.publicKey,
+            newCollectionMetadata: destinationCollection.metadata.publicKey,
+            collectionDelegateRecord,
+            newCollectionMasterEdition: destinationCollection.edition.publicKey,
+            metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+            sysvarInstructions: getSysvar("instructions"),
+          })
+          .preInstructions([anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({ units: 500_000 })])
+          .signers([toWeb3JsKeypair(newMint)])
+          .rpc(),
+      (err) => assertErrorCode(err, "ConverterInactive")
+    )
+  })
+
+  it("Can turn the converter on", async () => {
+    await adminProgram.methods.toggleActive(true).accounts({ converter }).rpc()
+    const converterAccount = await adminProgram.account.converter.fetch(converter)
+    assert.ok(converterAccount.active, "Expected converter to be active")
+  })
+
   it("cannot convert an NFT from a different collection", async () => {
     const newMint = generateSigner(umi)
     const invalidCollection = await createCollection(umi)

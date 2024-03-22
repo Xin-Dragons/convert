@@ -315,6 +315,27 @@ export type Convert = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "toggleActive",
+      "accounts": [
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "active",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -513,6 +534,11 @@ export type Convert = {
       "code": 6013,
       "name": "InvalidRuleSet",
       "msg": "Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset"
+    },
+    {
+      "code": 6014,
+      "name": "ConverterInactive",
+      "msg": "This converter is currently inactive"
     }
   ]
 };
@@ -834,6 +860,27 @@ export const IDL: Convert = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "toggleActive",
+      "accounts": [
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "active",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1032,6 +1079,11 @@ export const IDL: Convert = {
       "code": 6013,
       "name": "InvalidRuleSet",
       "msg": "Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset"
+    },
+    {
+      "code": 6014,
+      "name": "ConverterInactive",
+      "msg": "This converter is currently inactive"
     }
   ]
 };
