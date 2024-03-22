@@ -184,7 +184,13 @@ export default function Convert() {
       <div className="flex md:flex-row flex-col lg:gap-20 gap-10 gap-5 mt-5 items-center">
         <Card className="md:w-1/2 w-full p-5">
           <CardHeader>
-            <h2 className="font-bold text-2xl">Select NFT to burn</h2>
+            <div className="flex justify-between items-center w-full gap-3">
+              <h2 className="font-bold text-2xl">Select NFT to burn</h2>
+              <p>
+                <span className="font-bold uppercase text-xs">Source collection</span>
+                <CopyAddress className="justify-end">{converter.account.sourceCollection.toBase58()}</CopyAddress>
+              </p>
+            </div>
           </CardHeader>
           <CardBody>
             <div className="flex flex-col gap-3">
@@ -206,7 +212,13 @@ export default function Convert() {
         </div>
         <Card className="md:w-1/2 w-full p-5">
           <CardHeader>
-            <h2 className="font-bold text-2xl">Converted pNFT</h2>
+            <div className="flex justify-between items-center w-full gap-3">
+              <h2 className="font-bold text-2xl">Converted pNFT</h2>
+              <p className="text-right">
+                <span className="font-bold uppercase text-xs text-right">Destination collection</span>
+                <CopyAddress className="justify-end">{converter.account.destinationCollection.toBase58()}</CopyAddress>
+              </p>
+            </div>
           </CardHeader>
           <CardBody>
             <div
