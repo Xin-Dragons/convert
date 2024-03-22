@@ -32,7 +32,7 @@ import { convertProgram } from "~/helpers/convert.server"
 import { umi } from "~/helpers/umi"
 import { getAccount } from "~/helpers/index.server"
 import { ProgramConfig } from "~/types/types"
-import { packTx, sendAllTxsWithRetries } from "~/helpers"
+import { displayErrorFromLog, packTx, sendAllTxsWithRetries } from "~/helpers"
 import { useConvert } from "~/context/convert"
 
 export default function Admin() {
@@ -40,6 +40,7 @@ export default function Admin() {
   const umi = useUmi()
   const [loading, setLoading] = useState(false)
   const convertProgram = useConvert()
+  const [fee, setFee] = useState("0.015")
   const wallet = useWallet()
 
   async function init() {
@@ -80,6 +81,45 @@ export default function Admin() {
     }
   }
 
+  async function updateFee() {
+    try {
+      setLoading(true)
+
+      const promise = Promise.resolve().then(async () => {
+        const tx = transactionBuilder().add({
+          instruction: fromWeb3JsInstruction(
+            await convertProgram.methods
+              .updateConvertFee(new anchor.BN(sol(Number(fee)).basisPoints.toString()))
+              .accounts({
+                programConfig: findProgramConfigPda(umi),
+                programData: findProgramDataAddress(umi),
+                program: convertProgram.programId,
+              })
+              .instruction()
+          ),
+          bytesCreatedOnChain: 8 + 8 + 1,
+          signers: [umi.identity],
+        })
+
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
+        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
+        return await sendAllTxsWithRetries(umi, convertProgram.provider.connection, signed, txFee ? 1 : 0)
+      })
+
+      toast.promise(promise, {
+        loading: "Updating config",
+        success: "Successfully updated config",
+        error: (err) => displayErrorFromLog(err, "Error  config"),
+      })
+
+      await promise
+    } catch (err: any) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (!wallet.publicKey) {
     return <ErrorMessage title="Wallet disconnected" />
   }
@@ -94,6 +134,12 @@ export default function Admin() {
         <Button onClick={init} disabled={loading}>
           Init
         </Button>
+        <div className="flex gap-3 items-center">
+          <Input label="Fee" type="number" value={fee} onValueChange={setFee} />
+          <Button onClick={updateFee} size="lg">
+            Update
+          </Button>
+        </div>
       </div>
 
       {/* <Recover /> */}

@@ -42,7 +42,6 @@ export const loader: LoaderFunction = async ({ params }) => {
     })
   }
   const converter: ConverterWithPublicKey = await getConverterFromSlug(slug as string)
-  console.log({ converter })
 
   const encoded = await convertProgram.coder.accounts.encode("converter", converter?.account)
 

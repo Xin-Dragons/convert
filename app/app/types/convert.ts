@@ -336,6 +336,37 @@ export type Convert = {
           "type": "bool"
         }
       ]
+    },
+    {
+      "name": "updateConvertFee",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "convertFee",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -879,6 +910,37 @@ export const IDL: Convert = {
         {
           "name": "active",
           "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "updateConvertFee",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "convertFee",
+          "type": "u64"
         }
       ]
     }

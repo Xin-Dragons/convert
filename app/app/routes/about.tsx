@@ -18,6 +18,7 @@ export default function About() {
           <Title /> is a decentralized platform for creating NFT to pNFT converters for any collection who did not move
           to royalty enforced pNFTs during the conversion period in 2023.
         </p>
+        <p>Holders can burn their existing legacy NFTs and receive identical royalty-enforced pNFTs in their place.</p>
         <p>
           The program address is{" "}
           <Link
@@ -43,11 +44,12 @@ export default function About() {
           listed as they are minted.
         </p>
         <p>
-          New pNFTs are minted with the default Metaplex rule set. If you wish to change this for a bespoke allow/deny
-          list, this can be done using Batch Update in the NFT Suite in{" "}
-          <Link href="https://biblio.tech/tools/nft-suite" target="_blank" rel="noreferrer" className="text-lg">
-            Biblio.tech
+          New pNFTs can be minted with the default Metaplex rule set, or a bespoke ruleset if you wish to fine-tune an
+          allow/deny list. A custom ruleset can be created using
+          <Link href="https://royalties.metaplex.com/" target="_blank" rel="noreferrer" className="text-lg">
+            Metaplex's royalty tool
           </Link>
+          .
         </p>
       </PanelCard>
     </Page>

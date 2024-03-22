@@ -16,7 +16,6 @@ import { useTheme } from "~/context/theme"
 
 export const loader: LoaderFunction = async () => {
   const converters: ConverterWithPublicKey[] = await getProgramAccounts(convertProgram, "converter", undefined, true)
-  console.log(converters)
 
   return json({
     converters: await Promise.all(

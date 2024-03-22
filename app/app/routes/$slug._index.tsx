@@ -75,7 +75,7 @@ export default function Convert() {
         const collectionDelegateRecord = findMetadataDelegateRecord(
           umi,
           destinationCollection.publicKey,
-          destinationCollection.metadata.publicKey,
+          destinationCollection.metadata.updateAuthority,
           fromWeb3JsPublicKey(converter.publicKey)
         )
         const tx = transactionBuilder().add({

@@ -25,7 +25,9 @@ export function DigitalAssetsProvider({ children, collection }: PropsWithChildre
 
     worker.onmessage = async (event) => {
       const { digitalAssets } = event.data
-      setDigitalAssets(digitalAssets.filter((da: DAS.GetAssetResponse) => !da.compression?.compressed))
+      setDigitalAssets(
+        digitalAssets.filter((da: DAS.GetAssetResponse) => !da.compression?.compressed && !da.ownership.frozen)
+      )
       setFetching(false)
       worker.terminate()
     }

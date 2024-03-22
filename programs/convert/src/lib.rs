@@ -41,6 +41,10 @@ pub mod convert {
     pub fn toggle_active(ctx: Context<ToggleActive>, active: bool) -> Result<()> {
         toggle_active_handler(ctx, active)
     }
+
+    pub fn update_convert_fee(ctx: Context<UpdateConvertFee>, convert_fee: u64) -> Result<()> {
+        update_convert_fee_handler(ctx, convert_fee)
+    }
 }
 
 #[error_code]
