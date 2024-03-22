@@ -199,6 +199,7 @@ export default function Convert() {
           </CardBody>
           <CardFooter>
             <p className="font-bold text-xl text-center w-full">
+              <span>{toBurn?.content?.metadata.name}</span>
               {toBurn ? <CopyAddress className="justify-center">{toBurn.id}</CopyAddress> : "Select an NFT"}
             </p>
           </CardFooter>
@@ -232,6 +233,7 @@ export default function Convert() {
           </CardBody>
           <CardFooter>
             <p className="font-bold text-xl text-center w-full">
+              <span>{pnft ? pnft.json.name : <span>&nbsp;</span>}</span>
               {pnft ? <CopyAddress className="justify-center">{pnft.publicKey}</CopyAddress> : <span>&nbsp;</span>}
             </p>
           </CardFooter>
