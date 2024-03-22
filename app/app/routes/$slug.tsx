@@ -31,7 +31,7 @@ import { adminWallet } from "~/constants"
 import { Popover } from "~/components/Popover"
 
 export const meta: MetaFunction = ({ data }: { data: any }) => {
-  return [{ title: `${data.name ? data.name + " " : ""} // RAFFLE` }]
+  return [{ title: `${data.name ? data.name + " " : ""} // CONVERT` }]
 }
 
 export const loader: LoaderFunction = async ({ params }) => {
