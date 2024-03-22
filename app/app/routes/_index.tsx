@@ -20,7 +20,7 @@ export const loader: LoaderFunction = async () => {
   return json({
     converters: await Promise.all(
       converters
-        // .filter((r) => r.account.active)
+        .filter((r) => r.account.active)
         .map(async (r) => {
           return {
             publicKey: r.publicKey.toBase58(),
