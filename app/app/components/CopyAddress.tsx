@@ -1,5 +1,5 @@
 import { CheckCircleIcon, DocumentDuplicateIcon } from "@heroicons/react/24/outline"
-import { Link, Tooltip } from "@nextui-org/react"
+import { Link, Tooltip, cn } from "@nextui-org/react"
 import { FC, useEffect, useState } from "react"
 import { shorten } from "~/helpers"
 
@@ -10,6 +10,7 @@ type CopyAddressProps = {
   textAlign?: "right" | "left" | "center"
   color?: any
   fontWeight?: any
+  className?: string
 }
 
 export const CopyAddress: FC<CopyAddressProps> = ({ children, chain = "solana", wallet, ...props }) => {
@@ -43,7 +44,7 @@ export const CopyAddress: FC<CopyAddressProps> = ({ children, chain = "solana", 
   const target = targets[chain as keyof object] as any
 
   return (
-    <span className="flex gap-1 items-center">
+    <span className={cn("flex gap-1 items-center", props.className)}>
       <Tooltip content={`View on ${target.name}`}>
         <Link href={`${target.url}${children}`} target="_blank">
           <img src={target.image} width="15px" style={{ display: "block" }} />

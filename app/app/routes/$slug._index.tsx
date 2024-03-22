@@ -11,12 +11,13 @@ import {
 import { getSysvar } from "@metaplex-foundation/mpl-toolbox"
 import { generateSigner, publicKey, transactionBuilder } from "@metaplex-foundation/umi"
 import { fromWeb3JsPublicKey, fromWeb3JsInstruction } from "@metaplex-foundation/umi-web3js-adapters"
-import { Button, Card, CardBody, CardHeader } from "@nextui-org/react"
+import { Button, Card, CardBody, CardFooter, CardHeader } from "@nextui-org/react"
 import { useNavigate, useOutletContext } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DAS } from "helius-sdk"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { CopyAddress } from "~/components/CopyAddress"
 import { NftSelector } from "~/components/NftSelector"
 import { FEES_WALLET, adminWallet } from "~/constants"
 import { useConvert } from "~/context/convert"
@@ -190,6 +191,11 @@ export default function Convert() {
               <NftSelector selected={toBurn} setSelected={(da) => setToBurn(da as any)} />
             </div>
           </CardBody>
+          <CardFooter>
+            <p className="font-bold text-xl text-center w-full">
+              {toBurn ? <CopyAddress className="justify-center">{toBurn.id}</CopyAddress> : "Select an NFT"}
+            </p>
+          </CardFooter>
         </Card>
         <div className="flex flex-col gap-3 items-center justify-center">
           <ArrowRightIcon className="w-20 hidden md:flex" />
@@ -212,6 +218,11 @@ export default function Convert() {
               }
             ></div>
           </CardBody>
+          <CardFooter>
+            <p className="font-bold text-xl text-center w-full">
+              {pnft ? <CopyAddress className="justify-center">{pnft.publicKey}</CopyAddress> : <span>&nbsp;</span>}
+            </p>
+          </CardFooter>
         </Card>
       </div>
     </div>

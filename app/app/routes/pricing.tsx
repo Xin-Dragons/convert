@@ -14,8 +14,8 @@ export default function Pricing() {
         }
       >
         <p>
-          The total cost to convert an NFT to a pNFT is around <span className="text-primary font-bold">0.027 SOL</span>
-          . This is made up from the following:
+          The total cost to convert an NFT to a pNFT is around{" "}
+          <span className="text-primary font-bold">0.0279 SOL</span>. This is made up from the following:
         </p>
         <ul className="list-disc pl-4">
           <li>
@@ -26,7 +26,7 @@ export default function Pricing() {
           <li>
             <p>
               The rent from burning the original NFT is used to open accounts for the new pNFT, an additional amount of{" "}
-              <span className="text-primary font-bold">0.002 SOL</span> rent is needed to create a new Token Record
+              <span className="text-primary font-bold">0.0029 SOL</span> rent is needed to create a new Token Record
               account used by pNFTs.
             </p>
           </li>
