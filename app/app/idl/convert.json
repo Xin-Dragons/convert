@@ -16,12 +16,138 @@
           "isSigner": false
         },
         {
-          "name": "sourceCollectionMint",
+          "name": "collectionIdentifier",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "sourceCollectionMetadata",
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadata",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "destinationCollectionMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "destinationCollectionMetadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "collectionDelegateRecord",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "Metadata delegate record. The delegate is used to verify NFTs.",
+            ""
+          ]
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMetadataProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "ruleSet",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "sysvarInstructions",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "Instructions sysvar account.",
+            ""
+          ]
+        },
+        {
+          "name": "authorizationRulesProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token Authorization Rules program.",
+            ""
+          ]
+        },
+        {
+          "name": "authorizationRules",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true,
+          "docs": [
+            "Token Authorization rules account for the collection metadata (if any).",
+            ""
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "slug",
+          "type": "string"
+        },
+        {
+          "name": "logo",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "bg",
+          "type": {
+            "option": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "initUnapproved",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "collectionIdentifier",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadata",
           "isMut": false,
           "isSigner": false
         },
@@ -147,11 +273,6 @@
           "isSigner": false
         },
         {
-          "name": "updateAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "masterEdition",
           "isMut": true,
           "isSigner": false
@@ -159,7 +280,8 @@
         {
           "name": "collectionMetadata",
           "isMut": true,
-          "isSigner": false
+          "isSigner": false,
+          "isOptional": true
         },
         {
           "name": "nftSource",
@@ -192,7 +314,7 @@
           "isSigner": false
         },
         {
-          "name": "authority",
+          "name": "payer",
           "isMut": true,
           "isSigner": true
         },
@@ -301,15 +423,54 @@
         {
           "name": "program",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "isOptional": true
         },
         {
           "name": "programData",
           "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collectionMint",
+          "isMut": false,
           "isSigner": false
         },
         {
+          "name": "collectionMetadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "collectionDelegateRecord",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authorizationRules",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "authorizationRulesProgram",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
           "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMetadataProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "sysvarInstructions",
           "isMut": false,
           "isSigner": false
         }
@@ -367,6 +528,78 @@
           "type": "u64"
         }
       ]
+    },
+    {
+      "name": "updateConverter",
+      "accounts": [
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "ruleSet",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "logo",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "bg",
+          "type": {
+            "option": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "approve",
+      "accounts": [
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "collectionIdentifier",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
@@ -498,76 +731,86 @@
   "errors": [
     {
       "code": 6000,
+      "name": "ProgramSubError",
+      "msg": "Unable to subtract the given numbers"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidCollectionMint",
+      "msg": "Collection mint must be either a MCC or FVC"
+    },
+    {
+      "code": 6002,
       "name": "InvalidCollection",
       "msg": "Invalid collection"
     },
     {
-      "code": 6001,
+      "code": 6003,
       "name": "IncorrectCollectionAuthority",
       "msg": "Incorrect collection authority"
     },
     {
-      "code": 6002,
+      "code": 6004,
       "name": "MintMismatch",
       "msg": "Mint mismatch"
     },
     {
-      "code": 6003,
+      "code": 6005,
       "name": "UnauthorisedUA",
-      "msg": "Only the UA can create a converter"
+      "msg": "Only the UA or the system admin can create a converter"
     },
     {
-      "code": 6004,
+      "code": 6006,
       "name": "SlugTooLong",
       "msg": "Slug can only be a maximum of 50 chars"
     },
     {
-      "code": 6005,
+      "code": 6007,
       "name": "SlugRequired",
       "msg": "Slug is required"
     },
     {
-      "code": 6006,
+      "code": 6008,
       "name": "NameTooLong",
       "msg": "Project name can only be a maximum of 50 chars"
     },
     {
-      "code": 6007,
+      "code": 6009,
       "name": "NameRequired",
       "msg": "Project name is required"
     },
     {
-      "code": 6008,
+      "code": 6010,
       "name": "InvalidSlug",
       "msg": "Slug can only contain valid URL slug chars"
     },
     {
-      "code": 6009,
+      "code": 6011,
       "name": "SlugExists",
       "msg": "Slug already exists"
     },
     {
-      "code": 6010,
+      "code": 6012,
       "name": "LogoTooLong",
       "msg": "Logo URI max length 63"
     },
     {
-      "code": 6011,
+      "code": 6013,
       "name": "BgTooLong",
       "msg": "Bg URI max length 63"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "AdminOnly",
       "msg": "This is an admin only action"
     },
     {
-      "code": 6013,
+      "code": 6015,
       "name": "InvalidRuleSet",
       "msg": "Invalid ruleSet, either pass in a valid ruleset or omit for Metaplex default ruleset"
     },
     {
-      "code": 6014,
+      "code": 6016,
       "name": "ConverterInactive",
       "msg": "This converter is currently inactive"
     }

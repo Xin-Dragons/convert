@@ -1,16 +1,15 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     metadata::{Metadata, MetadataAccount},
-    token::{Mint, Token},
+    token::Mint,
 };
 use mpl_candy_machine_core::{
     approve_metadata_delegate, constants::MPL_TOKEN_AUTH_RULES_PROGRAM,
-    ApproveMetadataDelegateHelperAccounts, RevokeMetadataDelegateHelperAccounts,
+    ApproveMetadataDelegateHelperAccounts,
 };
 use solana_program::sysvar;
 
 use crate::{
-    program::Convert,
     state::{Converter, ProgramConfig},
     ConvertError,
 };
@@ -20,7 +19,7 @@ use proc_macro_regex::regex;
 regex!(regex_slug "^(?:[_a-z0-9]+)*$");
 
 #[derive(Accounts)]
-pub struct Init<'info> {
+pub struct InitUnapproved<'info> {
     #[account(
         mut,
         seeds = [
@@ -76,7 +75,7 @@ pub struct Init<'info> {
         ],
         seeds::program = Metadata::id(),
         bump,
-        constraint = destination_collection_metadata.update_authority == authority.key() @ ConvertError::UnauthorisedUA
+        constraint = destination_collection_metadata.update_authority == authority.key()
     )]
     destination_collection_metadata: Account<'info, MetadataAccount>,
 
@@ -86,10 +85,7 @@ pub struct Init<'info> {
     #[account(mut)]
     collection_delegate_record: UncheckedAccount<'info>,
 
-    #[account(
-        mut,
-        constraint = nft_metadata.update_authority == authority.key() @ ConvertError::UnauthorisedUA
-    )]
+    #[account(mut)]
     authority: Signer<'info>,
 
     system_program: Program<'info, System>,
@@ -118,8 +114,8 @@ pub struct Init<'info> {
     authorization_rules: Option<UncheckedAccount<'info>>,
 }
 
-pub fn init_handler(
-    ctx: Context<Init>,
+pub fn init_unapproved_handler(
+    ctx: Context<InitUnapproved>,
     name: String,
     slug: String,
     logo: Option<String>,
@@ -210,7 +206,7 @@ pub fn init_handler(
         logo,
         bg,
         ctx.accounts.authority.key(),
-        collection_identifier.key(),
+        Pubkey::default(),
         ctx.accounts.destination_collection_mint.key(),
         ctx.accounts
             .rule_set

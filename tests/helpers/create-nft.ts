@@ -17,33 +17,37 @@ import {
   transactionBuilder,
   none,
   publicKey,
+  KeypairSigner,
+  signerIdentity,
 } from "@metaplex-foundation/umi"
 import { getTokenAccount } from "./pdas"
+import { getUmi, umi as defaultUmi } from "./umi"
 
 const METAPLEX_RULE_SET = publicKey("eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9")
 const COMPATIBILITY_RULE_SET = publicKey("AdH2Utn6Fus15ZhtenW4hZBQnvtLgM1YCW2MfVp7pYS5")
 
 export async function createNft({
-  umi,
   isPnft = false,
   collection,
-  owner,
+  authority,
   name,
   uri,
   symbol,
   sellerFeeBasisPoints,
   creators,
+  owner,
 }: {
-  umi: Umi
   isPnft: boolean
   collection?: PublicKey
-  owner?: PublicKey
+  authority?: KeypairSigner
   name: string
   uri: string
   symbol: string
   sellerFeeBasisPoints: number
   creators: Creator[]
+  owner: PublicKey
 }) {
+  const umi = authority ? getUmi(authority) : defaultUmi
   const mint = generateSigner(umi)
 
   let txn = transactionBuilder()

@@ -2,6 +2,9 @@
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DAS } from "helius-sdk"
 import { PropsWithChildren, createContext, useContext, useEffect, useState } from "react"
+import { useUmi } from "./umi"
+import { publicKey } from "@metaplex-foundation/umi"
+import { SPL_TOKEN_PROGRAM_ID } from "@metaplex-foundation/mpl-toolbox"
 
 const Context = createContext<
   | {
@@ -15,6 +18,7 @@ const Context = createContext<
 export function DigitalAssetsProvider({ children, collection }: PropsWithChildren<{ collection?: string }>) {
   const [digitalAssets, setDigitalAssets] = useState<DAS.GetAssetResponse[]>([])
   const [fetching, setFetching] = useState(false)
+  const umi = useUmi()
   const wallet = useWallet()
 
   async function fetchAssets(wallet: string) {
@@ -33,9 +37,19 @@ export function DigitalAssetsProvider({ children, collection }: PropsWithChildre
     }
     setFetching(true)
 
+    let creator = undefined
+    if (collection) {
+      const acc = await umi.rpc.getAccount(publicKey(collection))
+      if (!acc.exists || acc.owner !== SPL_TOKEN_PROGRAM_ID) {
+        creator = collection
+        collection = undefined
+      }
+    }
+
     worker.postMessage({
       wallet,
       collection,
+      creator,
     })
   }
 

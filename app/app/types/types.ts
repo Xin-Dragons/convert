@@ -15,3 +15,5 @@ export type Converter = anchor.IdlAccounts<Convert>["converter"]
 export type ProgramConfig = anchor.IdlAccounts<Convert>["programConfig"]
 
 export type Assets = { bg: string | null; logo: string | null }
+
+export type CollectionType = "existing" | "clone" | "new"

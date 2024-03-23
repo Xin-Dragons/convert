@@ -12,10 +12,11 @@ import { Title } from "~/components/Title"
 import { convertProgram } from "~/helpers/convert.server"
 import { ConverterWithPublicKey } from "~/types/types"
 import { useConvert } from "~/context/convert"
-import { useTheme } from "~/context/theme"
+import { publicKey } from "@metaplex-foundation/umi"
 
 export const loader: LoaderFunction = async () => {
   const converters: ConverterWithPublicKey[] = await getProgramAccounts(convertProgram, "converter", undefined, true)
+  console.log(converters)
 
   return json({
     converters: await Promise.all(

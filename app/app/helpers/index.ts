@@ -11,6 +11,7 @@ import {
   generateSigner,
   percentAmount,
   publicKey,
+  unwrapOptionRecursively,
 } from "@metaplex-foundation/umi"
 import _, { compact, mapValues } from "lodash"
 import axios from "axios"
@@ -234,6 +235,19 @@ export function getCloneCollectionInstruction(umi: Umi, cloneFrom: DigitalAsset,
     uri: cloneFrom.metadata.uri,
     sellerFeeBasisPoints: percentAmount(0),
     symbol: cloneFrom.metadata.symbol,
-    updateAuthority: cloneFrom.metadata.updateAuthority,
+    updateAuthority: umi.identity,
+    creators: unwrapOptionRecursively(cloneFrom.metadata.creators)?.map((creator) => {
+      if (creator.address === umi.identity.publicKey) {
+        return {
+          ...creator,
+          verified: true,
+        }
+      } else {
+        return {
+          ...creator,
+          verified: false,
+        }
+      }
+    }),
   })
 }

@@ -26,6 +26,16 @@ pub mod convert {
         init_handler(ctx, name, slug, logo, bg)
     }
 
+    pub fn init_unapproved(
+        ctx: Context<InitUnapproved>,
+        name: String,
+        slug: String,
+        logo: Option<String>,
+        bg: Option<String>,
+    ) -> Result<()> {
+        init_unapproved_handler(ctx, name, slug, logo, bg)
+    }
+
     pub fn convert(ctx: Context<Convert>) -> Result<()> {
         convert_handler(ctx)
     }
@@ -45,17 +55,34 @@ pub mod convert {
     pub fn update_convert_fee(ctx: Context<UpdateConvertFee>, convert_fee: u64) -> Result<()> {
         update_convert_fee_handler(ctx, convert_fee)
     }
+
+    pub fn update_converter(
+        ctx: Context<UpdateConverter>,
+        name: Option<String>,
+        logo: Option<String>,
+        bg: Option<String>,
+    ) -> Result<()> {
+        update_converter_hander(ctx, name, logo, bg)
+    }
+
+    pub fn approve(ctx: Context<Approve>) -> Result<()> {
+        approve_handler(ctx)
+    }
 }
 
 #[error_code]
 pub enum ConvertError {
+    #[msg("Unable to subtract the given numbers")]
+    ProgramSubError,
+    #[msg("Collection mint must be either a MCC or FVC")]
+    InvalidCollectionMint,
     #[msg("Invalid collection")]
     InvalidCollection,
     #[msg("Incorrect collection authority")]
     IncorrectCollectionAuthority,
     #[msg("Mint mismatch")]
     MintMismatch,
-    #[msg("Only the UA can create a converter")]
+    #[msg("Only the UA or the system admin can create a converter")]
     UnauthorisedUA,
     #[msg("Slug can only be a maximum of 50 chars")]
     SlugTooLong,

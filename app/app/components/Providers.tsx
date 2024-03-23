@@ -7,6 +7,7 @@ import { PriorityFeesProvider } from "~/context/priority-fees"
 import { ThemeProvider } from "~/context/theme"
 import { Theme } from "~/types/types"
 import { ConvertProvider } from "~/context/convert"
+import { TxsProvider } from "~/context/txs"
 
 export function Providers({ children, rpcHost, theme }: PropsWithChildren<{ rpcHost: string; theme?: Theme }>) {
   return (
@@ -15,7 +16,9 @@ export function Providers({ children, rpcHost, theme }: PropsWithChildren<{ rpcH
         <UmiProvider rpcHost={rpcHost}>
           <PriorityFeesProvider>
             <ConvertProvider>
-              <ThemeProvider theme={theme}>{children}</ThemeProvider>
+              <TxsProvider>
+                <ThemeProvider theme={theme}>{children}</ThemeProvider>
+              </TxsProvider>
             </ConvertProvider>
           </PriorityFeesProvider>
         </UmiProvider>

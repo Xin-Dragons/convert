@@ -1,7 +1,17 @@
 import { createProgrammableNft, fetchDigitalAsset } from "@metaplex-foundation/mpl-token-metadata"
-import { generateSigner, percentAmount, transactionBuilder, type Umi } from "@metaplex-foundation/umi"
+import {
+  generateSigner,
+  percentAmount,
+  transactionBuilder,
+  type Umi,
+  KeypairSigner,
+  signerIdentity,
+} from "@metaplex-foundation/umi"
+import { getUmi, umi as defaultUmi } from "./umi"
 
-export async function createCollection(umi: Umi, collection = generateSigner(umi)) {
+export async function createCollection(collection?: KeypairSigner, authority?: KeypairSigner) {
+  const umi = authority ? getUmi(authority) : defaultUmi
+  collection = collection || generateSigner(umi)
   await transactionBuilder()
     .add(
       createProgrammableNft(umi, {

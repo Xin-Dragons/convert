@@ -11,22 +11,22 @@ pub struct InitProgramConfig<'info> {
         seeds = [b"program-config"],
         bump
     )]
-    pub program_config: Account<'info, ProgramConfig>,
+    program_config: Account<'info, ProgramConfig>,
 
     #[account(
         constraint = program.programdata_address()? == Some(program_data.key()) @ ConvertError::AdminOnly
     )]
-    pub program: Program<'info, Convert>,
+    program: Program<'info, Convert>,
 
     #[account(
         constraint = program_data.upgrade_authority_address == Some(authority.key()) @ ConvertError::AdminOnly
     )]
-    pub program_data: Account<'info, ProgramData>,
+    program_data: Account<'info, ProgramData>,
 
     #[account(mut)]
-    pub authority: Signer<'info>,
+    authority: Signer<'info>,
 
-    pub system_program: Program<'info, System>,
+    system_program: Program<'info, System>,
 }
 
 pub fn init_program_config_handler(

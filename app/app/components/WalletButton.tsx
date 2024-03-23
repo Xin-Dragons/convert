@@ -61,6 +61,20 @@ export const WalletButton = () => {
     handleClose()
   }
 
+  function onAdminClick() {
+    handleClose()
+  }
+
+  let converter = (matches.find((match: any) => match.data !== null && "converter" in match.data)?.data as any)
+    ?.converter
+
+  const account: Converter | null = converter
+    ? program.coder.accounts.decode("converter", Buffer.from(converter.account))
+    : null
+  const authority = account?.authority.toBase58()
+
+  const isAdmin = wallet.publicKey?.toBase58() === authority
+
   const icons = {
     copy: <DocumentDuplicateIcon className="w-5" />,
     "change-wallet": <WalletIcon className="w-5" />,
@@ -101,6 +115,7 @@ export const WalletButton = () => {
                   key: "disconnect",
                   label: "Disconnect",
                 },
+                ...(isAdmin ? [{ key: "admin", label: "Admin" }] : []),
               ]}
               aria-label="Wallet"
               onAction={(key) => {
@@ -114,6 +129,9 @@ export const WalletButton = () => {
                   case "disconnect":
                     onDisconnectClick()
                     break
+                  case "admin":
+                    onAdminClick()
+                    break
                 }
               }}
             >
@@ -124,7 +142,7 @@ export const WalletButton = () => {
                   className={item.key === "disconnect" ? "text-danger" : ""}
                   startContent={icons[item.key as keyof object]}
                 >
-                  {item.label}
+                  {item.key === "admin" ? <Link to={`${account?.slug}/admin`}>{item.label}</Link> : item.label}
                 </ListboxItem>
               )}
             </Listbox>

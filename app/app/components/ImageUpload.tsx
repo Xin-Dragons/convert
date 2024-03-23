@@ -54,7 +54,7 @@ export function ImageUpload({
       <div
         {...getRootProps()}
         className={cn(
-          "w-full aspect-video bg-content2 rounded-xl hover:bg-content3 cursor-pointer flex items-center justify-center relative",
+          "w-full aspect-video bg-content1 rounded-xl hover:bg-content3 cursor-pointer flex items-center justify-center relative",
           {
             "bg-content3": isDragActive,
             "border-2": isDragAccept || isDragReject,

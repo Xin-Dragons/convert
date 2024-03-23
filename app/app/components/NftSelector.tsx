@@ -1,5 +1,6 @@
 import {
   Button,
+  Chip,
   CircularProgress,
   Input,
   Modal,
@@ -31,6 +32,11 @@ export function NftSelector({
           } as any
         }
       >
+        {selected && (
+          <Chip className="absolute top-8 right-8" color="warning">
+            NFT
+          </Chip>
+        )}
         <Button
           className={`opacity-${selected ? "0" : "100"} group-hover:opacity-100`}
           onClick={() => setModalOpen(true)}

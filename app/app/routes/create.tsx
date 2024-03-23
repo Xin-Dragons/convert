@@ -1,80 +1,65 @@
 import { MPL_TOKEN_AUTH_RULES_PROGRAM_ID } from "@metaplex-foundation/mpl-token-auth-rules"
-import {
-  DigitalAsset,
-  MPL_TOKEN_METADATA_PROGRAM_ID,
-  TokenStandard,
-  fetchDigitalAsset,
-  findMetadataPda,
-} from "@metaplex-foundation/mpl-token-metadata"
-import { getSysvar, setComputeUnitPrice } from "@metaplex-foundation/mpl-toolbox"
-import {
-  createGenericFile,
-  createGenericFileFromBrowserFile,
-  generateSigner,
-  isNone,
-  publicKey,
-  transactionBuilder,
-  unwrapOptionRecursively,
-} from "@metaplex-foundation/umi"
-import { fromWeb3JsInstruction } from "@metaplex-foundation/umi-web3js-adapters"
-import {
-  Button,
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  Image,
-  Input,
-  Link as NextUiLink,
-  Switch,
-} from "@nextui-org/react"
-import { Link, useNavigate } from "@remix-run/react"
+import { DigitalAsset, TokenStandard, fetchDigitalAsset } from "@metaplex-foundation/mpl-token-metadata"
+import { isNone, publicKey, unwrapOptionRecursively } from "@metaplex-foundation/umi"
+import { Button, Input, Link as NextUiLink, Radio, RadioGroup, Switch } from "@nextui-org/react"
+import { Link } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import axios from "axios"
-import base58 from "bs58"
+
 import { DAS } from "helius-sdk"
-import { compact, debounce } from "lodash"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { ErrorMessage } from "~/components/ErrorMessage"
 import { ImageUpload } from "~/components/ImageUpload"
+import { NftSelectorModal } from "~/components/NftSelector"
 import { PanelCard } from "~/components/PanelCard"
 import { Popover } from "~/components/Popover"
 import { Title } from "~/components/Title"
-import { useConvert } from "~/context/convert"
-import { usePriorityFees } from "~/context/priority-fees"
+import { DigitalAssetsProvider } from "~/context/digital-assets"
 import { useTheme } from "~/context/theme"
+import { useTxs } from "~/context/txs"
 import { useUmi } from "~/context/umi"
-import {
-  displayErrorFromLog,
-  getCloneCollectionInstruction,
-  packTx,
-  sendAllTxsWithRetries,
-  sleep,
-  uploadFiles,
-} from "~/helpers"
-
-import { getPriorityFeesForTx } from "~/helpers/helius"
-import { findConverterPda, findMetadataDelegateRecord, findProgramConfigPda } from "~/helpers/pdas"
+import { CollectionType } from "~/types/types"
 
 export default function Create() {
   const wallet = useWallet()
-  const { feeLevel } = usePriorityFees()
   const { theme, setTheme } = useTheme()
-  const [loading, setLoading] = useState(false)
+  const { loading, createConverter } = useTxs()
   const [slug, setSlug] = useState("")
   const [name, setName] = useState("")
   const umi = useUmi()
-  const program = useConvert()
-  const [collectionPk, setCollectionPk] = useState<string>("")
-  const [collection, setCollection] = useState<DigitalAsset | null>(null)
-  const [collectionError, setCollectionError] = useState<string | null>(null)
+  const [nftPk, setNftPk] = useState<string>("")
   const [slugError, setSlugError] = useState<null | string>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [ruleSet, setRuleSet] = useState("")
   const [ruleSetError, setRuleSetError] = useState<string | null>(null)
   const [bgFile, setBgFile] = useState<File | null>(null)
-  const navigate = useNavigate()
+  const [nftModalOpen, setNftModalOpen] = useState(false)
+  const [selectedNft, setSelectedNft] = useState<DAS.GetAssetResponse | null>(null)
+  const [nftPkError, setNftPkError] = useState<string | null>(null)
+  const [collectionPk, setCollectionPk] = useState("")
+  const [collectionError, setCollectionError] = useState<string | null>(null)
+  const [collection, setCollection] = useState<DigitalAsset | null>(null)
+  const [existingCollection, setExistingCollection] = useState<DigitalAsset | null>(null)
+  const [collectionType, setCollectionType] = useState<CollectionType>("existing")
+
+  async function create() {
+    if (!selectedNft) {
+      toast.error("Select an NFT to set up the converter")
+      return
+    }
+    await createConverter({
+      selectedNft,
+      collectionType,
+      name,
+      slug,
+      logoFile,
+      bgFile,
+      collection,
+      existingCollection,
+      ruleSet: ruleSet ? publicKey(ruleSet) : null,
+    })
+  }
 
   useEffect(() => {
     const logo = logoFile ? URL.createObjectURL(logoFile) : null
@@ -86,87 +71,13 @@ export default function Create() {
     setTheme(theme)
   }, [logoFile, bgFile])
 
-  async function createConverter() {
-    try {
-      setLoading(true)
-      if (!collection) {
-        throw new Error("Select a collection to convert")
-      }
-      const converter = findConverterPda(umi, collection.publicKey)
-
-      const promise = Promise.resolve().then(async () => {
-        let logo = null
-        let bg = null
-        if (logoFile || bgFile) {
-          const uploadPromise = uploadFiles(umi, logoFile, bgFile)
-
-          toast.promise(uploadPromise, {
-            loading: "Uploading assets",
-            success: "Uploaded successfully",
-            error: "Error uploading files",
-          })
-
-          const res = await uploadPromise
-          logo = res.logo
-          bg = res.bg
-        }
-
-        const sourceCollection = await fetchDigitalAsset(umi, collection.publicKey)
-        const destinationCollection = generateSigner(umi)
-
-        const collectionDelegateRecord = findMetadataDelegateRecord(
-          umi,
-          destinationCollection.publicKey,
-          umi.identity.publicKey,
-          converter
-        )
-
-        let tx = transactionBuilder()
-          .add(getCloneCollectionInstruction(umi, sourceCollection, destinationCollection))
-          .add({
-            instruction: fromWeb3JsInstruction(
-              await program.methods
-                .init(name, slug, logo, bg)
-                .accounts({
-                  programConfig: findProgramConfigPda(umi),
-                  converter,
-                  sourceCollectionMint: sourceCollection.publicKey,
-                  sourceCollectionMetadata: sourceCollection.metadata.publicKey,
-                  destinationCollectionMint: destinationCollection.publicKey,
-                  destinationCollectionMetadata: findMetadataPda(umi, { mint: destinationCollection.publicKey })[0],
-                  collectionDelegateRecord,
-                  ruleSet: ruleSet || null,
-                  tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
-                  sysvarInstructions: getSysvar("instructions"),
-                  authorizationRulesProgram: MPL_TOKEN_AUTH_RULES_PROGRAM_ID,
-                  authorizationRules: null,
-                })
-                .instruction()
-            ),
-            bytesCreatedOnChain:
-              8 + 32 + (4 + 50) + (4 + 50) + 32 + 32 + 1 + (1 + 4 + 52) + (1 + 4 + 52) + (1 + 4 + 50) + 1,
-            signers: [umi.identity],
-          })
-
-        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
-        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
-        return await sendAllTxsWithRetries(umi, program.provider.connection, signed, 1 + (txFee ? 1 : 0))
-      })
-
-      toast.promise(promise, {
-        loading: "Creating new // CONVERT app",
-        success: "// CONVERT created successfully",
-        error: (err) => displayErrorFromLog(err, "Error creating // CONVERT app"),
-      })
-
-      await promise
-      navigate(`/${slug}`)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (!selectedNft) {
+      setNftPk("")
+      return
     }
-  }
+    setNftPk(selectedNft.id)
+  }, [selectedNft])
 
   useEffect(() => {
     if (slug.length > 50) {
@@ -177,6 +88,55 @@ export default function Create() {
       setSlugError(null)
     }
   }, [slug])
+
+  useEffect(() => {
+    if (!nftPk) {
+      setSelectedNft(null)
+      setNftPkError(null)
+      setExistingCollection(null)
+      return
+    }
+    ;(async () => {
+      try {
+        const nftPubkey = publicKey(nftPk)
+        const da = await fetchDigitalAsset(umi, nftPubkey)
+
+        const tokenStandard = unwrapOptionRecursively(da.metadata.tokenStandard)
+        if (tokenStandard !== null && tokenStandard !== TokenStandard.NonFungible) {
+          throw new Error("Only legacy NFTs can be converted")
+        }
+
+        const collection = unwrapOptionRecursively(da.metadata.collection)
+        if (collection?.verified) {
+          const collectionDa = await fetchDigitalAsset(umi, collection.key)
+          if (collectionDa.metadata.updateAuthority === wallet.publicKey?.toBase58()) {
+            setCollectionType("existing")
+          } else {
+            setCollectionType("clone")
+          }
+          setExistingCollection(collectionDa)
+          setName(collectionDa.metadata.name)
+        } else {
+          setCollectionType("new")
+          setExistingCollection(null)
+        }
+        const {
+          data: { digitalAsset },
+        } = await axios.get<{ digitalAsset: DAS.GetAssetResponse }>(`/api/get-nft/${nftPk}`)
+        setSelectedNft(digitalAsset)
+        setNftPkError(null)
+      } catch (err: any) {
+        if (err.message.includes("The provided public key is invalid")) {
+          setNftPkError("Invalid public key")
+        } else if (err.message.includes("The account of type [Metadata] was not found at the provided address")) {
+          setNftPkError("This account is not an NFT")
+        } else {
+          setNftPkError(err.message || "Invalid NFT")
+        }
+        setExistingCollection(null)
+      }
+    })()
+  }, [nftPk])
 
   useEffect(() => {
     if (!collectionPk) {
@@ -192,16 +152,14 @@ export default function Create() {
           throw new Error("This address is not a Metaplex Certified Collection")
         }
         if (da.metadata.updateAuthority !== wallet.publicKey?.toBase58()) {
-          throw new Error("Only the update authority can set up a converter")
+          throw new Error("You must be update authority for the new collection")
         }
-        const {
-          data: { digitalAsset },
-        } = await axios.get<{ digitalAsset: DAS.GetAssetResponse }>(`/api/get-da-for-collection/${collectionPk}`)
-        const sampleDa = await fetchDigitalAsset(umi, publicKey(digitalAsset.id))
-        const tokenStandard = unwrapOptionRecursively(sampleDa.metadata.tokenStandard)
-        // if (tokenStandard !== null && tokenStandard !== TokenStandard.NonFungible) {
-        //   throw new Error("Only legacy NFTs can be converted")
-        // }
+
+        const collectionDetails = unwrapOptionRecursively(da.metadata.collectionDetails)
+        if (collectionDetails.__kind === "V1" && collectionDetails.size > 0n) {
+          throw new Error("This collection already has items, please create a new collection")
+        }
+
         setCollectionError(null)
         setCollection(da)
       } catch (err: any) {
@@ -251,8 +209,7 @@ export default function Create() {
     setSlug("")
     setBgFile(null)
     setLogoFile(null)
-    setCollectionPk("")
-    setCollection(null)
+    setNftPk("")
     setRuleSet("")
   }
 
@@ -260,69 +217,127 @@ export default function Create() {
     return <ErrorMessage title="Wallet disconnected" />
   }
 
-  const isDirty = name || slug || logoFile || bgFile || collection || ruleSet
-  const canSubmit = name && slug && collection && !slugError && !collectionError && !ruleSetError
+  const isDirty = name || slug || logoFile || bgFile || nftPk || ruleSet
+  const canSubmit =
+    name &&
+    slug &&
+    selectedNft &&
+    !slugError &&
+    (existingCollection || collection) &&
+    !collectionError &&
+    !ruleSetError &&
+    !nftPkError
 
   return (
-    <div className="h-full flex flex-col gap-4 ">
-      <Link to=".">
-        {theme?.logo ? <img src={theme?.logo} className="h-20" /> : <h3 className="text-3xl">{name}</h3>}
-      </Link>
-      <PanelCard
-        title={
-          <span>
-            Create <Title app="converter" />
-          </span>
-        }
-        footer={
-          <div className="flex gap-3 justify-end w-full">
-            <Button color="danger" variant="bordered" onClick={clear} isDisabled={!isDirty}>
-              Clear
-            </Button>
-            <Button color="primary" isDisabled={loading || !canSubmit} onClick={createConverter}>
-              Create //CONVERT
-            </Button>
-          </div>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <div className="flex sm:flex-row flex-col gap-3">
+    <DigitalAssetsProvider>
+      <div className="h-full flex flex-col gap-4 ">
+        <Link to=".">
+          {theme?.logo ? <img src={theme?.logo} className="h-20" /> : <h3 className="text-3xl">{name}</h3>}
+        </Link>
+        <PanelCard
+          title={
+            <span>
+              Create <Title app="converter" />
+            </span>
+          }
+          footer={
+            <div className="flex gap-3 justify-end w-full">
+              <Button color="danger" variant="bordered" onClick={clear} isDisabled={!isDirty}>
+                Clear
+              </Button>
+              <Button color="primary" isDisabled={loading || !canSubmit} onClick={create}>
+                Create
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex flex-col gap-3">
             <Input
-              autoFocus
-              label="Name"
+              label="Sample NFT"
+              value={nftPk}
+              onValueChange={setNftPk}
               variant="bordered"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              data-form-type="other"
+              errorMessage={nftPkError}
+              isRequired
+              endContent={
+                <Button size="sm" onClick={() => setNftModalOpen(true)}>
+                  Choose
+                </Button>
+              }
             />
-            <Input
-              label="Slug"
-              variant="bordered"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              description={`https://convert.xinlabs.io/${slug}`}
-              errorMessage={slugError}
-              data-form-type="other"
-            />
-          </div>
+            <div className="p-3 bg-content2 rounded-xl flex flex-col gap-3">
+              <h3 className="text-xl">Project settings</h3>
+              <div className="flex sm:flex-row flex-col gap-3">
+                <Input
+                  autoFocus
+                  label="Name"
+                  variant="bordered"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  data-form-type="other"
+                  isRequired
+                />
+                <Input
+                  label="Slug"
+                  variant="bordered"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  description={`https://convert.xinlabs.io/${slug}`}
+                  errorMessage={slugError}
+                  data-form-type="other"
+                  isRequired
+                />
+              </div>
 
-          <Input
-            label="Metaplex Certified Collection"
-            value={collectionPk}
-            onValueChange={setCollectionPk}
-            variant="bordered"
-            errorMessage={collectionError}
-            endContent={
-              <Popover
-                title="Metaplex Certified Collection"
-                placement="left"
-                large
-                content={
-                  <div className="flex flex-col gap-3">
-                    <p>This can be found by looking at the NFT on Solscan and checking the "Metadata" tab</p>
-                    <Image src={"/mcc.png"} />
+              <div className="flex flex-col [@media(min-width:400px)]:flex-row gap-6 w-full mb-3">
+                <ImageUpload
+                  label="Logo"
+                  file={logoFile}
+                  setFile={setLogoFile}
+                  className="flex-1 bg-current1"
+                  onClear={() => setLogoFile(null)}
+                />
+                <ImageUpload
+                  label="Background"
+                  file={bgFile}
+                  setFile={setBgFile}
+                  className="flex-1"
+                  onClear={() => setBgFile(null)}
+                />
+              </div>
+            </div>
+
+            {selectedNft && (
+              <div className="flex flex-col gap-3 bg-content2 p-3 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl">Destination collection</h3>
+                  {existingCollection && (
+                    <p className="text-base">
+                      Existing MCC:{" "}
+                      <NextUiLink
+                        href={`https://solscan.io/${existingCollection.publicKey}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {existingCollection.metadata.name}
+                      </NextUiLink>
+                    </p>
+                  )}
+                </div>
+
+                <p className="text-xs">
+                  {existingCollection ? (
                     <p>
-                      If your collection doesn't have a Metaplex Certified Collection (MCC) you can add one using{" "}
+                      This is the new collection used to group the minted pNFTs. You can use the same collection, clone
+                      the existing MCC, or provide a new collection mint address below.
+                      <br />
+                      <br />
+                      We recommend using the existing MCC where possible, for maximum integration with marketplaces and
+                      third party apps.
+                    </p>
+                  ) : (
+                    <span>
+                      No existing collection found, You can create a new Metaplex Certified Collection (MCC) using{" "}
                       <NextUiLink
                         href="https://biblio.tech/tools/nft-suite"
                         className="text-tiny"
@@ -331,64 +346,106 @@ export default function Create() {
                       >
                         Biblio.tech
                       </NextUiLink>
+                    </span>
+                  )}
+                </p>
+                <RadioGroup
+                  label="Collection for converted pNFTs"
+                  value={collectionType}
+                  onValueChange={(value) => setCollectionType(value as CollectionType)}
+                >
+                  <Radio
+                    value="existing"
+                    isDisabled={
+                      !existingCollection || existingCollection.metadata.updateAuthority !== wallet.publicKey.toBase58()
+                    }
+                  >
+                    Use existing collection
+                  </Radio>
+                  <Radio value="clone" isDisabled={!existingCollection}>
+                    Clone into new collection
+                  </Radio>
+                  <Radio value="new">Provide new collection</Radio>
+                </RadioGroup>
+                <div className="flex gap-3">
+                  {collectionType === "new" && (
+                    <Input
+                      label="New Metaplex Certified Collection"
+                      value={collectionPk}
+                      onValueChange={setCollectionPk}
+                      variant="bordered"
+                      errorMessage={collectionError}
+                      isRequired={collectionType === "new"}
+                      color={collection && !collectionError ? "primary" : "default"}
+                      endContent={
+                        <Popover
+                          title="Metaplex Certified Collection"
+                          placement="left"
+                          large
+                          content={
+                            <div className="flex flex-col gap-3">
+                              <p>
+                                You can create a new Metaplex Certified Collection (MCC) using{" "}
+                                <NextUiLink
+                                  href="https://biblio.tech/tools/nft-suite"
+                                  className="text-tiny"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  Biblio.tech
+                                </NextUiLink>
+                              </p>
+                            </div>
+                          }
+                        />
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            <Input
+              label="Rule set"
+              value={ruleSet}
+              onValueChange={setRuleSet}
+              variant="bordered"
+              errorMessage={ruleSetError}
+              description="Leave blank to use the default Metaplex managed ruleset"
+              endContent={
+                <Popover
+                  title="Rule Set"
+                  placement="left"
+                  large
+                  content={
+                    <p>
+                      Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific
+                      programs or accounts. Leave blank to assign the default Metaplex rule set
+                      <br />
+                      <br />
+                      You can create a new ruleset using{" "}
+                      <NextUiLink
+                        href="https://royalties.metaplex.com/"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs"
+                      >
+                        Metaplex's royalty tool
+                      </NextUiLink>
                     </p>
-                  </div>
-                }
-              />
-            }
-          />
-
-          <Input
-            label="Rule set"
-            value={ruleSet}
-            onValueChange={setRuleSet}
-            variant="bordered"
-            errorMessage={ruleSetError}
-            description="Leave blank to use the default Metaplex managed ruleset"
-            endContent={
-              <Popover
-                title="Rule Set"
-                placement="left"
-                large
-                content={
-                  <p>
-                    Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific programs
-                    or accounts. Leave blank to assign the default Metaplex rule set
-                    <br />
-                    <br />
-                    You can create a new ruleset using{" "}
-                    <NextUiLink
-                      href="https://royalties.metaplex.com/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs"
-                    >
-                      Metaplex's royalty tool
-                    </NextUiLink>
-                  </p>
-                }
-              />
-            }
-          />
-
-          <div className="flex flex-col [@media(min-width:400px)]:flex-row gap-6 w-full mb-3">
-            <ImageUpload
-              label="Logo"
-              file={logoFile}
-              setFile={setLogoFile}
-              className="flex-1"
-              onClear={() => setLogoFile(null)}
+                  }
+                />
+              }
             />
-            <ImageUpload
-              label="Background"
-              file={bgFile}
-              setFile={setBgFile}
-              className="flex-1"
-              onClear={() => setBgFile(null)}
+
+            <NftSelectorModal
+              modalOpen={nftModalOpen}
+              setModalOpen={setNftModalOpen}
+              setSelected={(nft) => setSelectedNft(nft as any)}
             />
           </div>
-        </div>
-      </PanelCard>
-    </div>
+        </PanelCard>
+      </div>
+    </DigitalAssetsProvider>
   )
 }

@@ -1,37 +1,42 @@
+import * as anchor from "@coral-xyz/anchor"
 import { ArrowDownIcon, ArrowRightIcon } from "@heroicons/react/24/outline"
 import {
   fetchDigitalAsset,
-  findMetadataPda,
-  findMasterEditionPda,
-  MPL_TOKEN_METADATA_PROGRAM_ID,
   DigitalAsset,
   JsonMetadata,
   fetchJsonMetadata,
 } from "@metaplex-foundation/mpl-token-metadata"
-import { getSysvar } from "@metaplex-foundation/mpl-toolbox"
-import { generateSigner, publicKey, transactionBuilder } from "@metaplex-foundation/umi"
-import { fromWeb3JsPublicKey, fromWeb3JsInstruction } from "@metaplex-foundation/umi-web3js-adapters"
-import { Button, Card, CardBody, CardFooter, CardHeader } from "@nextui-org/react"
+import { publicKey } from "@metaplex-foundation/umi"
+import {
+  Button,
+  Card,
+  CardBody,
+  CardFooter,
+  CardHeader,
+  Chip,
+  Input,
+  Link,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@nextui-org/react"
 import { useNavigate, useOutletContext } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DAS } from "helius-sdk"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { CopyAddress } from "~/components/CopyAddress"
+import { ErrorMessage } from "~/components/ErrorMessage"
 import { NftSelector } from "~/components/NftSelector"
-import { FEES_WALLET, adminWallet } from "~/constants"
+import { adminWallet } from "~/constants"
 import { useConvert } from "~/context/convert"
 import { useDigitalAssets } from "~/context/digital-assets"
 import { usePriorityFees } from "~/context/priority-fees"
+import { useTxs } from "~/context/txs"
 import { useUmi } from "~/context/umi"
-import { packTx, sendAllTxsWithRetries, displayErrorFromLog } from "~/helpers"
-import {
-  findMetadataDelegateRecord,
-  findProgramConfigPda,
-  findProgramDataAddress,
-  getTokenAccount,
-  getTokenRecordPda,
-} from "~/helpers/pdas"
+import { findConverterPda } from "~/helpers/pdas"
 import { ConverterWithPublicKey } from "~/types/types"
 
 type DigitalAssetWithJson = DigitalAsset & {
@@ -39,16 +44,47 @@ type DigitalAssetWithJson = DigitalAsset & {
 }
 
 export default function Convert() {
-  const { removeNft } = useDigitalAssets()
-  const convertProgram = useConvert()
-  const { feeLevel } = usePriorityFees()
-  const converter = useOutletContext<ConverterWithPublicKey>()
+  const { loading, convert, deleteConverter, approve } = useTxs()
+  const [converter, setConverter] = useState(useOutletContext<ConverterWithPublicKey>())
   const [toBurn, setToBurn] = useState<DAS.GetAssetResponse | null>(null)
-  const [loading, setLoading] = useState(false)
   const [pnft, setPnft] = useState<DigitalAssetWithJson | null>(null)
+  const [collectionIdentifier, setCollectionIdentifier] = useState("")
+  const [collectionIdentifierError, setCollectionIdentifierError] = useState<string | null>(null)
+  const program = useConvert()
   const wallet = useWallet()
-  const navigate = useNavigate()
   const umi = useUmi()
+
+  useEffect(() => {
+    async function syncConverter() {
+      const acc = await program.account.converter.fetch(converter.publicKey)
+      setConverter({
+        publicKey: converter.publicKey,
+        account: acc,
+      })
+    }
+    const id = program.provider.connection.onAccountChange(converter.publicKey, syncConverter)
+    return () => {
+      program.provider.connection.removeAccountChangeListener(id)
+    }
+  }, [converter.publicKey.toBase58()])
+
+  useEffect(() => {
+    if (!collectionIdentifier) {
+      setCollectionIdentifierError(null)
+      return
+    }
+    try {
+      const pk = publicKey(collectionIdentifier)
+      const matches = findConverterPda(umi, pk) === converter.publicKey.toBase58()
+      if (matches) {
+        setCollectionIdentifierError(null)
+      } else {
+        setCollectionIdentifierError("Invalid collection identifier")
+      }
+    } catch {
+      setCollectionIdentifierError("Invalid collection identifier")
+    }
+  }, [collectionIdentifier])
 
   useEffect(() => {
     if (toBurn) {
@@ -56,131 +92,46 @@ export default function Convert() {
     }
   }, [toBurn?.id])
 
-  async function convert() {
-    try {
-      setLoading(true)
-      const newMint = generateSigner(umi)
-      if (!converter) {
-        throw new Error("No converter loaded")
-      }
-      if (!toBurn) {
-        throw new Error("No NFT selected")
-      }
-      const promise = Promise.resolve().then(async () => {
-        const destinationCollection = await fetchDigitalAsset(
-          umi,
-          fromWeb3JsPublicKey(converter.account.destinationCollection)
-        )
-        const sourceCollection = await fetchDigitalAsset(umi, fromWeb3JsPublicKey(converter.account.sourceCollection))
-        const toBurnDa = await fetchDigitalAsset(umi, publicKey(toBurn.id))
-        const collectionDelegateRecord = findMetadataDelegateRecord(
-          umi,
-          destinationCollection.publicKey,
-          destinationCollection.metadata.updateAuthority,
-          fromWeb3JsPublicKey(converter.publicKey)
-        )
-        const tx = transactionBuilder().add({
-          instruction: fromWeb3JsInstruction(
-            await convertProgram.methods
-              .convert()
-              .accounts({
-                programConfig: findProgramConfigPda(umi),
-                feesWallet: FEES_WALLET,
-                converter: converter.publicKey,
-                nftMint: toBurnDa.publicKey,
-                nftMetadata: toBurnDa.metadata.publicKey,
-                updateAuthority: toBurnDa.metadata.updateAuthority,
-                masterEdition: toBurnDa.edition?.publicKey!,
-                collectionMetadata: sourceCollection.metadata.publicKey,
-                nftSource: getTokenAccount(umi, toBurnDa.publicKey, umi.identity.publicKey),
-                newMint: newMint.publicKey,
-                authority: umi.identity.publicKey,
-                newToken: getTokenAccount(umi, newMint.publicKey, umi.identity.publicKey),
-                tokenRecord: getTokenRecordPda(umi, newMint.publicKey, umi.identity.publicKey),
-                newMetadata: findMetadataPda(umi, { mint: newMint.publicKey })[0],
-                newMasterEdition: findMasterEditionPda(umi, { mint: newMint.publicKey })[0],
-                newCollectionMint: destinationCollection.publicKey,
-                newCollectionMetadata: destinationCollection.metadata.publicKey,
-                collectionDelegateRecord,
-                newCollectionMasterEdition: destinationCollection.edition!.publicKey,
-                metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
-                sysvarInstructions: getSysvar("instructions"),
-              })
-              .instruction()
-          ),
-          bytesCreatedOnChain: 0,
-          signers: [umi.identity, newMint],
-        })
-
-        const { chunks, txFee } = await packTx(umi, tx, feeLevel, 500_000)
-        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
-        return await sendAllTxsWithRetries(umi, convertProgram.provider.connection, signed, 1 + (txFee ? 1 : 0))
-      })
-
-      toast.promise(promise, {
-        loading: "Converting NFT",
-        success: "NFT converted successfully!",
-        error: (err) => displayErrorFromLog(err, "Error converting NFT"),
-      })
-
-      await promise
-      const nft = await fetchDigitalAsset(umi, newMint.publicKey)
+  async function convertNft() {
+    if (!toBurn) {
+      toast.error("Select an NFT to convert")
+      return
+    }
+    const newMint = await convert(converter, toBurn)
+    if (newMint) {
+      const nft = await fetchDigitalAsset(umi, newMint)
       const json = await fetchJsonMetadata(umi, nft.metadata.uri)
       setPnft({
         ...nft,
         json,
       })
-      removeNft(toBurn.id)
       setToBurn(null)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
     }
   }
 
-  async function deleteConverter() {
+  async function doApprove() {
     try {
-      setLoading(true)
-      const promise = Promise.resolve().then(async () => {
-        const tx = transactionBuilder().add({
-          instruction: fromWeb3JsInstruction(
-            await convertProgram.methods
-              .deleteConverter()
-              .accounts({
-                converter: converter.publicKey,
-                programConfig: findProgramConfigPda(umi),
-                programData: findProgramDataAddress(umi),
-                program: convertProgram.programId,
-              })
-              .instruction()
-          ),
-          bytesCreatedOnChain: 0,
-          signers: [umi.identity],
-        })
-        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
-        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
-        return await sendAllTxsWithRetries(umi, convertProgram.provider.connection, signed, txFee ? 1 : 0)
-      })
-
-      toast.promise(promise, {
-        loading: "Deleting converter",
-        success: "Success!",
-        error: (err) => displayErrorFromLog(err, "Error deleting converter"),
-      })
-
-      await promise
-      navigate("/")
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
+      if (umi.identity.publicKey !== adminWallet) {
+        throw new Error("only system admin can approve a converter")
+      }
+      if (!collectionIdentifier) {
+        throw new Error("Collection identifier required")
+      }
+      await approve(converter, collectionIdentifier)
+    } catch (err: any) {
+      toast.error(err.message)
     }
+  }
+
+  if (
+    converter.account.sourceCollection.equals(anchor.web3.PublicKey.default) &&
+    ![adminWallet, converter.account.authority.toBase58()].includes(wallet.publicKey?.toBase58()!)
+  ) {
+    return <ErrorMessage title="Not found" content="No active converter found at this URL" />
   }
 
   return (
     <div>
-      {wallet.publicKey?.toBase58() === adminWallet && <Button onClick={deleteConverter}>Delete</Button>}
       <div className="flex md:flex-row flex-col lg:gap-20 gap-10 gap-5 mt-5 items-center">
         <Card className="md:w-1/2 w-full p-5">
           <CardHeader>
@@ -206,7 +157,7 @@ export default function Convert() {
         </Card>
         <div className="flex flex-col gap-3 items-center justify-center">
           <ArrowRightIcon className="w-20 hidden md:flex" />
-          <Button onClick={convert} isDisabled={!toBurn} color="primary" size="lg">
+          <Button onClick={convertNft} isDisabled={!toBurn} color="primary" size="lg">
             Convert
           </Button>
           <ArrowDownIcon className="w-20 md:hidden" />
@@ -229,7 +180,13 @@ export default function Convert() {
                   "--image-url": `url('https://img-cdn.magiceden.dev/rs:fill:600:600:0:0/plain/${pnft?.json?.image}')`,
                 } as any
               }
-            ></div>
+            >
+              {pnft && (
+                <Chip className="absolute top-8 right-8" color="primary">
+                  NFT
+                </Chip>
+              )}
+            </div>
           </CardBody>
           <CardFooter>
             <p className="font-bold text-xl text-center w-full">
@@ -238,6 +195,55 @@ export default function Convert() {
             </p>
           </CardFooter>
         </Card>
+        <Modal
+          isOpen={converter.account.sourceCollection.toBase58() === anchor.web3.PublicKey.default.toBase58()}
+          className="main-theme text-foreground"
+          isDismissable={false}
+          classNames={{
+            closeButton: "hidden",
+          }}
+          size="xl"
+        >
+          <ModalContent>
+            <ModalHeader>
+              <h2 className="text-primary uppercase text-xl text-center w-full">Approval needed</h2>
+            </ModalHeader>
+            <ModalBody>
+              {wallet.publicKey?.toBase58() === adminWallet ? (
+                <Input
+                  label="Collection identifier"
+                  value={collectionIdentifier}
+                  onValueChange={setCollectionIdentifier}
+                  errorMessage={collectionIdentifierError}
+                />
+              ) : (
+                <p className="text-center">
+                  This converter needs to be approved by a system admin, as the update authority of the new collection
+                  does not match the existing collection.
+                  <br />
+                  <br />
+                  Please open a ticket in the{" "}
+                  <Link href="https://discord.gg/qfRFjDbcu7" target="_blank" rel="noreferrer">
+                    Xin Dragons discord
+                  </Link>{" "}
+                  to enable the app
+                </p>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <div className="w-full flex justify-between">
+                <Button color="danger" onClick={() => deleteConverter(converter)}>
+                  Delete converter
+                </Button>
+                {wallet.publicKey?.toBase58() === adminWallet && (
+                  <Button onClick={doApprove} color="primary">
+                    Approve
+                  </Button>
+                )}
+              </div>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </div>
     </div>
   )

@@ -34,7 +34,7 @@ pub struct Convert<'info> {
             converter.source_collection.as_ref(),
         ],
         bump = converter.bump,
-        constraint = converter.active @ ConvertError::ConverterInactive
+        constraint = converter.active @ ConvertError::ConverterInactive,
     )]
     converter: Account<'info, Converter>,
 
@@ -53,12 +53,8 @@ pub struct Convert<'info> {
         ],
         seeds::program = Metadata::id(),
         bump,
-        constraint = nft_metadata.collection.as_ref().unwrap().verified && nft_metadata.collection.as_ref().unwrap().key == converter.source_collection @ ConvertError::InvalidCollection,
-        has_one = update_authority
     )]
     nft_metadata: Box<Account<'info, MetadataAccount>>,
-
-    update_authority: SystemAccount<'info>,
 
     #[account(mut)]
     master_edition: Box<Account<'info, MasterEditionAccount>>,
@@ -73,12 +69,12 @@ pub struct Convert<'info> {
         seeds::program = Metadata::id(),
         bump,
     )]
-    collection_metadata: Box<Account<'info, MetadataAccount>>,
+    collection_metadata: Option<Box<Account<'info, MetadataAccount>>>,
 
     #[account(
         mut,
         associated_token::mint = nft_mint,
-        associated_token::authority = authority
+        associated_token::authority = payer
     )]
     nft_source: Box<Account<'info, TokenAccount>>,
 
@@ -102,7 +98,7 @@ pub struct Convert<'info> {
     new_master_edition: UncheckedAccount<'info>,
 
     #[account(mut)]
-    authority: Signer<'info>,
+    payer: Signer<'info>,
 
     /// CHECK: checked in CPI
     new_collection_mint: UncheckedAccount<'info>,
@@ -132,9 +128,12 @@ impl<'info> Convert<'info> {
         let metadata = &self.nft_metadata.as_ref().to_account_info();
         let mint = &self.nft_mint.to_account_info();
         let token = &self.nft_source.to_account_info();
-        let token_owner = &self.authority.to_account_info();
+        let token_owner = &self.payer.to_account_info();
         let master_edition = &self.master_edition.to_account_info();
-        let nft_collection_metadata = self.collection_metadata.to_account_info();
+        let nft_collection_metadata = &self
+            .collection_metadata
+            .as_ref()
+            .map(|coll| coll.to_owned().to_account_info());
         let system_program = &self.system_program.to_account_info();
         let sysvar_instructions = &self.sysvar_instructions.to_account_info();
         let spl_token_program = &self.token_program.to_account_info();
@@ -143,7 +142,7 @@ impl<'info> Convert<'info> {
 
         cpi_burn
             .authority(token_owner)
-            .collection_metadata(Some(&nft_collection_metadata))
+            .collection_metadata(nft_collection_metadata.as_ref())
             .edition(Some(master_edition))
             .metadata(metadata)
             .mint(mint)
@@ -164,7 +163,7 @@ impl<'info> Convert<'info> {
         let nft_metadata = &self.nft_metadata;
         let new_metadata = &self.new_metadata.to_account_info();
         let new_mint = &self.new_mint.to_account_info();
-        let authority = &self.authority.to_account_info();
+        let authority = &self.payer.to_account_info();
         let metadata_program = &self.metadata_program.to_account_info();
         let token_program = &self.token_program.to_account_info();
         let system_program = &self.system_program.to_account_info();
@@ -287,14 +286,41 @@ impl<'info> Convert<'info> {
 }
 
 pub fn convert_handler(ctx: Context<Convert>) -> Result<()> {
+    let converter = &ctx.accounts.converter;
     let program_config = &ctx.accounts.program_config;
     let fees_wallet = &ctx.accounts.fees_wallet;
+    let nft_metadata = &ctx.accounts.nft_metadata;
+
+    if nft_metadata.collection.is_some() && nft_metadata.collection.as_ref().unwrap().verified {
+        let collection = nft_metadata.collection.as_ref().unwrap();
+        require_keys_eq!(
+            collection.key,
+            converter.source_collection,
+            ConvertError::InvalidCollection
+        )
+    } else {
+        let fvc = nft_metadata
+            .creators
+            .as_ref()
+            .expect("No creators, and no collection, cannot set up converter")
+            .iter()
+            .find(|creator| creator.verified)
+            .expect("no verified creator")
+            .address;
+
+        require_keys_eq!(
+            fvc,
+            converter.source_collection,
+            ConvertError::InvalidCollection
+        );
+    }
+
     ctx.accounts.burn_nft()?;
     ctx.accounts.mint_pnft()?;
 
     if program_config.convert_fee > 0 {
         let ix = anchor_lang::solana_program::system_instruction::transfer(
-            &ctx.accounts.authority.key(),
+            &ctx.accounts.payer.key(),
             &fees_wallet.key(),
             program_config.convert_fee,
         );
@@ -302,7 +328,7 @@ pub fn convert_handler(ctx: Context<Convert>) -> Result<()> {
         anchor_lang::solana_program::program::invoke(
             &ix,
             &[
-                ctx.accounts.authority.to_account_info(),
+                ctx.accounts.payer.to_account_info(),
                 fees_wallet.to_account_info(),
             ],
         )?;

@@ -1,5 +1,5 @@
 self.addEventListener("message", async (event) => {
-  const { wallet, collection } = event.data
+  const { wallet, collection, creator } = event.data
 
   const res = await fetch(`/api/get-nfts/${wallet}`, {
     method: "POST",
@@ -7,7 +7,7 @@ self.addEventListener("message", async (event) => {
       ContentType: "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify({ collection }),
+    body: JSON.stringify({ collection, creator }),
   })
 
   const { digitalAssets } = await res.json()
