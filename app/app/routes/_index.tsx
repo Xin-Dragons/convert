@@ -52,7 +52,10 @@ export default function Index() {
 }
 
 function Converter({ converter }: { converter: ConverterWithPublicKey }) {
-  const logo = converter.account.logo !== "undefined?ext=undefined" && `https://arweave.net/${converter.account.logo}`
+  const logo =
+    converter.account.logo &&
+    converter.account.logo !== "undefined?ext=undefined" &&
+    `https://arweave.net/${converter.account.logo}`
 
   return (
     <Link to={`/${converter.account.slug}`}>

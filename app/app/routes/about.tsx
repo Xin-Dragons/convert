@@ -15,10 +15,9 @@ export default function About() {
         }
       >
         <p>
-          <Title /> is a decentralized platform for creating NFT to pNFT converters for any collection who did not move
-          to royalty enforced pNFTs during the conversion period in 2023.
+          <Title /> is a decentralized platform for migrating from legacy asset types (NFT) to newer asset types that
+          include features such as royalty enforcement or more concise account design.
         </p>
-        <p>Holders can burn their existing legacy NFTs and receive identical royalty-enforced pNFTs in their place.</p>
         <p>
           The program address is{" "}
           <Link
@@ -35,21 +34,31 @@ export default function About() {
           </Link>
         </p>
         <p>
-          To prevent any malicious use, a converter can only be created by the Update Authority wallet. When a converter
-          is created, a new Metaplex Certified Collection NFT is minted into the Update Authority wallet to group all
+          Currenly <Title /> supports converting NFTs to pNFTs, and either NFTs or pNFTS into the new{" "}
+          <Link href="https://developers.metaplex.com/core" target="_blank" rel="noreferrer" className="text-lg">
+            Metaplex Core
+          </Link>{" "}
+          asset class.
+        </p>
+        <p>
+          Support for converting to{" "}
+          <Link href="https://nifty-oss.org/" target="_blank" rel="noreferrer" className="text-lg">
+            Nifty Assets
+          </Link>{" "}
+          will be added soon
+        </p>
+
+        <p>
+          To prevent malicious use, a converter can only be created by the Update Authority wallet, if this is not
+          available, the converter will need to be approved by a system admin before the app can be used.
+        </p>
+        <p>
+          When a converter is created, a new Collection asset is minted into the Update Authority wallet to group all
           newly minted pNFTs.{" "}
         </p>
         <p className="font-bold text-primary">
           You will need to give the address of this new Collection NFT to marketplaces in order for the new items to be
           listed as they are minted.
-        </p>
-        <p>
-          New pNFTs can be minted with the default Metaplex rule set, or a bespoke ruleset if you wish to fine-tune an
-          allow/deny list. A custom ruleset can be created using
-          <Link href="https://royalties.metaplex.com/" target="_blank" rel="noreferrer" className="text-lg">
-            Metaplex's royalty tool
-          </Link>
-          .
         </p>
       </PanelCard>
     </Page>
