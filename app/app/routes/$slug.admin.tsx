@@ -1,3 +1,4 @@
+import { CollectionV1, fetchCollectionV1 } from "@metaplex-foundation/mpl-core"
 import { MPL_TOKEN_AUTH_RULES_PROGRAM_ID } from "@metaplex-foundation/mpl-token-auth-rules"
 import { DigitalAsset, fetchDigitalAsset } from "@metaplex-foundation/mpl-token-metadata"
 import { publicKey } from "@metaplex-foundation/umi"
@@ -30,7 +31,7 @@ export default function ConverterAdmin() {
   const [slug, setSlug] = useState(converter.account.slug)
   const [slugError, setSlugError] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
-  const [collection, setCollection] = useState<DigitalAsset | null>(null)
+  const [collection, setCollection] = useState<DigitalAsset | CollectionV1 | null>(null)
   const [bgFile, setBgFile] = useState<File | null>(null)
   const [ruleSet, setRuleSet] = useState(converter.account.ruleSet?.toBase58())
   const [ruleSetError, setRuleSetError] = useState<string | null>(null)
@@ -39,8 +40,13 @@ export default function ConverterAdmin() {
 
   useEffect(() => {
     ;(async () => {
-      const collection = await fetchDigitalAsset(umi, fromWeb3JsPublicKey(converter.account.destinationCollection))
-      setCollection(collection)
+      if (converter.account.assetType.pnft) {
+        const collection = await fetchDigitalAsset(umi, fromWeb3JsPublicKey(converter.account.destinationCollection))
+        setCollection(collection)
+      } else {
+        const collection = await fetchCollectionV1(umi, fromWeb3JsPublicKey(converter.account.destinationCollection))
+        setCollection(collection)
+      }
     })()
   }, [converter.account.destinationCollection.toBase58()])
 
@@ -187,11 +193,18 @@ export default function ConverterAdmin() {
             <div className="flex flex-col gap-3 bg-content2 p-3 rounded-xl">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl">Destination collection</h3>
-                {collection && <p className="text-primary">{collection.metadata.name}</p>}
+                {collection && (
+                  <p className="text-primary">
+                    {converter.account.assetType.core
+                      ? (collection as CollectionV1).name
+                      : (collection as DigitalAsset).metadata.name}
+                  </p>
+                )}
               </div>
               <p className="text-xs">
-                Converted pNFTs will be minted into this collection. This cannot be updated. To change the collection
-                you will need to delete this converter and create a new one
+                Converted {converter.account.assetType.pnft ? "pNFTs" : "Core assets"} will be minted into this
+                collection. This cannot be updated. To change the collection you will need to delete this converter and
+                create a new one
               </p>
 
               <h3>
@@ -199,38 +212,40 @@ export default function ConverterAdmin() {
               </h3>
             </div>
 
-            <Input
-              label="Rule set"
-              value={ruleSet}
-              onValueChange={setRuleSet}
-              variant="bordered"
-              errorMessage={ruleSetError}
-              description="Leave blank to use the default Metaplex managed ruleset"
-              endContent={
-                <Popover
-                  title="Rule Set"
-                  placement="left"
-                  large
-                  content={
-                    <p>
-                      Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific
-                      programs or accounts. Leave blank to assign the default Metaplex rule set
-                      <br />
-                      <br />
-                      You can create a new ruleset using{" "}
-                      <NextUiLink
-                        href="https://royalties.metaplex.com/"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs"
-                      >
-                        Metaplex's royalty tool
-                      </NextUiLink>
-                    </p>
-                  }
-                />
-              }
-            />
+            {converter.account.assetType.pnft && (
+              <Input
+                label="Rule set"
+                value={ruleSet}
+                onValueChange={setRuleSet}
+                variant="bordered"
+                errorMessage={ruleSetError}
+                description="Leave blank to use the default Metaplex managed ruleset"
+                endContent={
+                  <Popover
+                    title="Rule Set"
+                    placement="left"
+                    large
+                    content={
+                      <p>
+                        Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific
+                        programs or accounts. Leave blank to assign the default Metaplex rule set
+                        <br />
+                        <br />
+                        You can create a new ruleset using{" "}
+                        <NextUiLink
+                          href="https://royalties.metaplex.com/"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs"
+                        >
+                          Metaplex's royalty tool
+                        </NextUiLink>
+                      </p>
+                    }
+                  />
+                }
+              />
+            )}
           </div>
         </PanelCard>
       </div>

@@ -233,16 +233,6 @@ export async function closeCoreConverter(user: KeypairSigner, converter: PublicK
   const program = programPaidBy(user)
   const converterAcc = await program.account.converter.fetch(converter)
 
-  console.log({
-    programConfig: findProgramConfigPda(),
-    program: null,
-    programData: null,
-    converter,
-    collection: converterAcc.destinationCollection,
-    coreProgram: MPL_CORE_PROGRAM_ID,
-    authority: program.provider.publicKey,
-  })
-
   await program.methods
     .closeCoreConverter()
     .accounts({

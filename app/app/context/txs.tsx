@@ -6,6 +6,7 @@ import { UmiProvider, useUmi } from "./umi"
 import {
   DigitalAsset,
   MPL_TOKEN_METADATA_PROGRAM_ID,
+  TokenStandard,
   fetchDigitalAsset,
   fetchJsonMetadata,
   findMasterEditionPda,
@@ -42,13 +43,15 @@ import toast from "react-hot-toast"
 import { useNavigate } from "@remix-run/react"
 import { DAS } from "helius-sdk"
 import { FEES_WALLET } from "~/constants"
-import { MPL_CORE_PROGRAM_ID } from "@metaplex-foundation/mpl-core"
+import { MPL_CORE_PROGRAM_ID, fetchCollectionV1 } from "@metaplex-foundation/mpl-core"
+import { useDigitalAssets } from "./digital-assets"
 
 const Context = createContext<
   | {
       loading: boolean
       deleteConverter: (converter: ConverterWithPublicKey) => Promise<void>
       convert: (converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) => Promise<PublicKey | undefined>
+      convertCore: (converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) => Promise<PublicKey | undefined>
       createConverter: (props: {
         selectedNft: DAS.GetAssetResponse
         collectionType: CollectionType
@@ -60,7 +63,7 @@ const Context = createContext<
         slug: string
         ruleSet: PublicKey | null
       }) => Promise<void>
-      approve: (converter: ConverterWithPublicKey, collectionIdentifier: string) => Promise<void>
+      toggleApproved: (converter: ConverterWithPublicKey, approved: boolean) => Promise<void>
       update: (
         converter: ConverterWithPublicKey,
         name: string,
@@ -134,7 +137,6 @@ export function TxsProvider({ children }: PropsWithChildren) {
                 .closeCoreConverter()
                 .accounts({
                   programConfig: findProgramConfigPda(umi),
-                  updateAuthority: converter.account.authority,
                   program: isUa ? null : program.programId,
                   programData: isUa ? null : findProgramDataAddress(umi),
                   converter: converter.publicKey,
@@ -240,7 +242,79 @@ export function TxsProvider({ children }: PropsWithChildren) {
 
       await promise
 
-      removeNft(toBurn.id)
+      return newMint.publicKey
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function convertCore(converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) {
+    try {
+      setLoading(true)
+      const newMint = generateSigner(umi)
+      if (!converter) {
+        throw new Error("No converter loaded")
+      }
+      if (!toBurn) {
+        throw new Error("No NFT selected")
+      }
+      const promise = Promise.resolve().then(async () => {
+        const destinationCollection = await fetchCollectionV1(
+          umi,
+          fromWeb3JsPublicKey(converter.account.destinationCollection)
+        )
+        const collectionIdentifier = fromWeb3JsPublicKey(converter.account.sourceCollection)
+        const sourceCollection = await umi.rpc.getAccount(collectionIdentifier)
+        const isCollection = sourceCollection.exists && sourceCollection.owner === SPL_TOKEN_PROGRAM_ID
+
+        const toBurnDa = await fetchDigitalAsset(umi, publicKey(toBurn.id))
+
+        const isPnft =
+          unwrapOptionRecursively(toBurnDa.metadata.tokenStandard) === TokenStandard.ProgrammableNonFungible
+        const tokenRecord = isPnft ? getTokenRecordPda(umi, toBurnDa.publicKey, umi.identity.publicKey) : null
+
+        const tx = transactionBuilder().add({
+          instruction: fromWeb3JsInstruction(
+            await program.methods
+              .convertCore()
+              .accounts({
+                converter: converter.publicKey,
+                programConfig: findProgramConfigPda(umi),
+                feesWallet: FEES_WALLET,
+                nftMint: toBurnDa.publicKey,
+                nftSource: getTokenAccount(umi, toBurnDa.publicKey, umi.identity.publicKey),
+                nftMetadata: toBurnDa.metadata.publicKey,
+                masterEdition: toBurnDa.edition?.publicKey,
+                collectionMetadata: isCollection ? findMetadataPda(umi, { mint: collectionIdentifier })[0] : null,
+                newMint: newMint.publicKey,
+                updateAuthority: converter.account.authority,
+                newCollectionMint: destinationCollection.publicKey,
+                metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                tokenRecord,
+                sysvarInstructions: getSysvar("instructions"),
+                coreProgram: MPL_CORE_PROGRAM_ID,
+              })
+              .instruction()
+          ),
+          bytesCreatedOnChain: 0,
+          signers: [umi.identity, newMint],
+        })
+
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel, 500_000)
+        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
+        return await sendAllTxsWithRetries(umi, program.provider.connection, signed, 1 + (txFee ? 1 : 0))
+      })
+
+      toast.promise(promise, {
+        loading: "Converting NFT",
+        success: "NFT converted successfully!",
+        error: (err) => displayErrorFromLog(err, "Error converting NFT"),
+      })
+
+      await promise
+
       return newMint.publicKey
     } catch (err) {
       console.error(err)
@@ -382,18 +456,18 @@ export function TxsProvider({ children }: PropsWithChildren) {
     }
   }
 
-  async function approve(converter: ConverterWithPublicKey, collectionIdentifier: string) {
+  async function toggleApproved(converter: ConverterWithPublicKey, approved: boolean) {
     try {
       setLoading(true)
       const promise = Promise.resolve().then(async () => {
         const tx = transactionBuilder().add({
           instruction: fromWeb3JsInstruction(
             await program.methods
-              .toggleApproved(true)
+              .toggleApproved(approved)
               .accounts({
                 converter: converter.publicKey,
                 program: program.programId,
-                collectionIdentifier,
+                collectionIdentifier: converter.account.sourceCollection,
                 programData: findProgramDataAddress(umi),
               })
               .instruction()
@@ -408,9 +482,9 @@ export function TxsProvider({ children }: PropsWithChildren) {
       })
 
       toast.promise(promise, {
-        loading: "Approving converter",
-        success: "Converter approved",
-        error: (err) => displayErrorFromLog(err, "Error approving"),
+        loading: approved ? "Approving converter" : "Revoking converter approval",
+        success: approved ? "Converter approved" : "Converter approval revoked",
+        error: (err) => displayErrorFromLog(err, approved ? "Error approving" : "Error revoking approval"),
       })
 
       await promise
@@ -533,6 +607,7 @@ export function TxsProvider({ children }: PropsWithChildren) {
         error: (err) => displayErrorFromLog(err, "Error creating Core converter"),
       })
       await promise
+      navigate(`/${slug}`)
     } catch (err: any) {
       console.error(err)
     } finally {
@@ -547,9 +622,10 @@ export function TxsProvider({ children }: PropsWithChildren) {
         deleteConverter,
         convert,
         createConverter,
-        approve,
+        toggleApproved,
         update,
         createCoreConverter,
+        convertCore,
       }}
     >
       {children}
@@ -565,7 +641,4 @@ export const useTxs = () => {
   }
 
   return context
-}
-function removeNft(id: string) {
-  throw new Error("Function not implemented.")
 }

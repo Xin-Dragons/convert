@@ -1,27 +1,23 @@
 import * as anchor from "@coral-xyz/anchor"
-import { fromWeb3JsPublicKey } from "@metaplex-foundation/umi-web3js-adapters"
-import { json, type LoaderFunction, type MetaFunction } from "@vercel/remix"
+import { json, type LoaderFunction } from "@vercel/remix"
 import { Link, useLoaderData } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useUmi } from "~/context/umi"
 import { Card, CardBody } from "@nextui-org/react"
 import { getProgramAccounts } from "~/helpers/index.server"
 import _ from "lodash"
-import { Title } from "~/components/Title"
 import { convertProgram } from "~/helpers/convert.server"
 import { ConverterWithPublicKey } from "~/types/types"
 import { useConvert } from "~/context/convert"
-import { publicKey } from "@metaplex-foundation/umi"
 
 export const loader: LoaderFunction = async () => {
   const converters: ConverterWithPublicKey[] = await getProgramAccounts(convertProgram, "converter", undefined, true)
-  console.log(converters)
 
   return json({
     converters: await Promise.all(
       converters
-        .filter((r) => r.account.active)
+        .filter((r) => r.account.active && r.account.approved)
         .map(async (r) => {
           return {
             publicKey: r.publicKey.toBase58(),
@@ -33,9 +29,6 @@ export const loader: LoaderFunction = async () => {
 }
 
 export default function Index() {
-  const [loading, setLoading] = useState(false)
-  const wallet = useWallet()
-  const umi = useUmi()
   const raffleProgram = useConvert()
   const data = useLoaderData<typeof loader>()
   const converters: ConverterWithPublicKey[] = _.orderBy(

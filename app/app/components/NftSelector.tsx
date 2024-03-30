@@ -17,9 +17,11 @@ import { imageCdn } from "~/helpers"
 export function NftSelector({
   selected,
   setSelected,
+  filter,
 }: {
   selected: DAS.GetAssetResponse | null
   setSelected: Dispatch<SetStateAction<DAS.GetAssetResponse>>
+  filter?: (asset: DAS.GetAssetResponse) => boolean
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   return (
@@ -44,7 +46,7 @@ export function NftSelector({
           {selected ? "Change" : "Select"} NFT
         </Button>
       </div>
-      <NftSelectorModal modalOpen={modalOpen} setModalOpen={setModalOpen} setSelected={setSelected} />
+      <NftSelectorModal modalOpen={modalOpen} setModalOpen={setModalOpen} setSelected={setSelected} filter={filter} />
     </div>
   )
 }

@@ -446,11 +446,6 @@ export type Convert = {
           "isSigner": true
         },
         {
-          "name": "updateAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "program",
           "isMut": false,
           "isSigner": false,
@@ -1462,11 +1457,6 @@ export const IDL: Convert = {
           "name": "authority",
           "isMut": true,
           "isSigner": true
-        },
-        {
-          "name": "updateAuthority",
-          "isMut": false,
-          "isSigner": false
         },
         {
           "name": "program",

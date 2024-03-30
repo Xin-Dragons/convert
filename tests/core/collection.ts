@@ -181,6 +181,6 @@ describe("Core - With collection", () => {
     const converterAcc = await adminProgram.account.converter.fetch(converter)
     await closeCoreConverter(authority, converter)
     const collectionAcc = await fetchCollectionV1(umi, fromWeb3JsPublicKey(converterAcc.destinationCollection))
-    assert.equal(collectionAcc.updateAuthority, fromWeb3JsPublicKey(converterAcc.authority))
+    assert.equal(collectionAcc.updateDelegate, null, "Expected update delegate to be removed")
   })
 })

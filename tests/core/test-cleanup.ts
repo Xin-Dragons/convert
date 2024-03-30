@@ -56,7 +56,7 @@ describe("Core - test cleanup TODO", () => {
     await initCore({
       user: authority,
       title: "Test project",
-      slug: "test_project",
+      slug: "test_cleanup",
       logo: "12345",
       bg: "12345",
       nftMint: nft.publicKey,

@@ -1,12 +1,11 @@
-import * as anchor from "@coral-xyz/anchor"
 import { ArrowDownIcon, ArrowRightIcon } from "@heroicons/react/24/outline"
+import { AssetV1, fetchAssetV1 } from "@metaplex-foundation/mpl-core"
 import {
   fetchDigitalAsset,
   DigitalAsset,
   JsonMetadata,
   fetchJsonMetadata,
 } from "@metaplex-foundation/mpl-token-metadata"
-import { publicKey } from "@metaplex-foundation/umi"
 import {
   Button,
   Card,
@@ -14,7 +13,6 @@ import {
   CardFooter,
   CardHeader,
   Chip,
-  Input,
   Link,
   Modal,
   ModalBody,
@@ -22,7 +20,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@nextui-org/react"
-import { useNavigate, useOutletContext } from "@remix-run/react"
+import { useOutletContext } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DAS } from "helius-sdk"
 import { useEffect, useState } from "react"
@@ -33,23 +31,25 @@ import { NftSelector } from "~/components/NftSelector"
 import { adminWallet } from "~/constants"
 import { useConvert } from "~/context/convert"
 import { useDigitalAssets } from "~/context/digital-assets"
-import { usePriorityFees } from "~/context/priority-fees"
 import { useTxs } from "~/context/txs"
 import { useUmi } from "~/context/umi"
-import { findConverterPda } from "~/helpers/pdas"
 import { ConverterWithPublicKey } from "~/types/types"
 
 type DigitalAssetWithJson = DigitalAsset & {
   json: JsonMetadata
 }
 
+type CoreAssetWithJson = AssetV1 & {
+  json: JsonMetadata
+}
+
 export default function Convert() {
-  const { loading, convert, deleteConverter, approve } = useTxs()
+  const { removeNft } = useDigitalAssets()
+  const { convert, deleteConverter, toggleApproved, convertCore } = useTxs()
   const [converter, setConverter] = useState(useOutletContext<ConverterWithPublicKey>())
   const [toBurn, setToBurn] = useState<DAS.GetAssetResponse | null>(null)
   const [pnft, setPnft] = useState<DigitalAssetWithJson | null>(null)
-  const [collectionIdentifier, setCollectionIdentifier] = useState("")
-  const [collectionIdentifierError, setCollectionIdentifierError] = useState<string | null>(null)
+  const [coreAsset, setCoreAsset] = useState<CoreAssetWithJson | null>(null)
   const program = useConvert()
   const wallet = useWallet()
   const umi = useUmi()
@@ -69,24 +69,6 @@ export default function Convert() {
   }, [converter.publicKey.toBase58()])
 
   useEffect(() => {
-    if (!collectionIdentifier) {
-      setCollectionIdentifierError(null)
-      return
-    }
-    try {
-      const pk = publicKey(collectionIdentifier)
-      const matches = findConverterPda(umi, pk) === converter.publicKey.toBase58()
-      if (matches) {
-        setCollectionIdentifierError(null)
-      } else {
-        setCollectionIdentifierError("Invalid collection identifier")
-      }
-    } catch {
-      setCollectionIdentifierError("Invalid collection identifier")
-    }
-  }, [collectionIdentifier])
-
-  useEffect(() => {
     if (toBurn) {
       setPnft(null)
     }
@@ -97,15 +79,27 @@ export default function Convert() {
       toast.error("Select an NFT to convert")
       return
     }
-    const newMint = await convert(converter, toBurn)
+    const newMint = converter.account.assetType.pnft
+      ? await convert(converter, toBurn)
+      : await convertCore(converter, toBurn)
     if (newMint) {
-      const nft = await fetchDigitalAsset(umi, newMint)
-      const json = await fetchJsonMetadata(umi, nft.metadata.uri)
-      setPnft({
-        ...nft,
-        json,
-      })
+      if (converter.account.assetType.pnft) {
+        const nft = await fetchDigitalAsset(umi, newMint)
+        const json = await fetchJsonMetadata(umi, nft.metadata.uri)
+        setPnft({
+          ...nft,
+          json,
+        })
+      } else {
+        const coreAsset = await fetchAssetV1(umi, newMint)
+        const json = await fetchJsonMetadata(umi, coreAsset.uri)
+        setCoreAsset({
+          ...coreAsset,
+          json,
+        })
+      }
       setToBurn(null)
+      removeNft(toBurn.id)
     }
   }
 
@@ -114,16 +108,11 @@ export default function Convert() {
       if (umi.identity.publicKey !== adminWallet) {
         throw new Error("only system admin can approve a converter")
       }
-      if (!collectionIdentifier) {
-        throw new Error("Collection identifier required")
-      }
-      await approve(converter, collectionIdentifier)
+      await toggleApproved(converter, true)
     } catch (err: any) {
       toast.error(err.message)
     }
   }
-
-  console.log(converter)
 
   if (
     !converter.account.approved &&
@@ -147,7 +136,11 @@ export default function Convert() {
           </CardHeader>
           <CardBody>
             <div className="flex flex-col gap-3">
-              <NftSelector selected={toBurn} setSelected={(da) => setToBurn(da as any)} />
+              <NftSelector
+                selected={toBurn}
+                setSelected={(da) => setToBurn(da as any)}
+                filter={(da) => !da.ownership.delegated}
+              />
             </div>
           </CardBody>
           <CardFooter>
@@ -167,7 +160,13 @@ export default function Convert() {
         <Card className="md:w-1/2 w-full p-5">
           <CardHeader>
             <div className="flex justify-between items-center w-full gap-3">
-              <h2 className="font-bold text-2xl">Converted pNFT</h2>
+              <h2 className="font-bold text-2xl">
+                {converter.account.assetType.pnft
+                  ? "pNFT"
+                  : converter.account.assetType.core
+                  ? "Core asset"
+                  : "Nifty asset"}
+              </h2>
               <p className="text-right">
                 <span className="font-bold uppercase text-xs text-right">Destination collection</span>
                 <CopyAddress className="justify-end">{converter.account.destinationCollection.toBase58()}</CopyAddress>
@@ -179,21 +178,44 @@ export default function Convert() {
               className={`group aspect-square rounded-xl border-3 border-white flex items-center justify-center bg-[image:var(--image-url)] bg-no-repeat bg-contain`}
               style={
                 {
-                  "--image-url": `url('https://img-cdn.magiceden.dev/rs:fill:600:600:0:0/plain/${pnft?.json?.image}')`,
+                  "--image-url": `url('https://img-cdn.magiceden.dev/rs:fill:600:600:0:0/plain/${
+                    converter.account.assetType.pnft ? pnft?.json?.image : coreAsset?.json.image
+                  }')`,
                 } as any
               }
             >
               {pnft && (
                 <Chip className="absolute top-8 right-8" color="primary">
-                  NFT
+                  pNFT
+                </Chip>
+              )}
+              {coreAsset && (
+                <Chip className="absolute top-8 right-8" color="primary">
+                  CORE
                 </Chip>
               )}
             </div>
           </CardBody>
           <CardFooter>
             <p className="font-bold text-xl text-center w-full">
-              <span>{pnft ? pnft.json.name : <span>&nbsp;</span>}</span>
-              {pnft ? <CopyAddress className="justify-center">{pnft.publicKey}</CopyAddress> : <span>&nbsp;</span>}
+              <span>
+                {converter.account.assetType.pnft ? (
+                  pnft ? (
+                    pnft.json.name
+                  ) : (
+                    <span>&nbsp;</span>
+                  )
+                ) : coreAsset ? (
+                  coreAsset.name
+                ) : (
+                  <span>&nbsp;</span>
+                )}
+              </span>
+              {pnft || coreAsset ? (
+                <CopyAddress className="justify-center">{(pnft || coreAsset)!.publicKey}</CopyAddress>
+              ) : (
+                <span>&nbsp;</span>
+              )}
             </p>
           </CardFooter>
         </Card>
@@ -211,14 +233,7 @@ export default function Convert() {
               <h2 className="text-primary uppercase text-xl text-center w-full">Approval needed</h2>
             </ModalHeader>
             <ModalBody>
-              {wallet.publicKey?.toBase58() === adminWallet ? (
-                <Input
-                  label="Collection identifier"
-                  value={collectionIdentifier}
-                  onValueChange={setCollectionIdentifier}
-                  errorMessage={collectionIdentifierError}
-                />
-              ) : (
+              {wallet.publicKey?.toBase58() !== adminWallet && (
                 <p className="text-center">
                   This converter needs to be approved by a system admin, as the update authority of the new collection
                   does not match the existing collection.

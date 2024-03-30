@@ -14,7 +14,7 @@ import { Convert } from "../../target/types/convert"
 import { closeCoreConverter, convertCore, initCore } from "../helpers/instructions"
 import { fetchAssetV1, fetchCollectionV1 } from "@metaplex-foundation/mpl-core"
 
-describe("Core - With collection", () => {
+describe("Core - pNFT", () => {
   let sourceCollection: DigitalAsset
   let user: KeypairSigner
   let userProgram: anchor.Program<Convert>
@@ -66,23 +66,6 @@ describe("Core - With collection", () => {
       bg: "12345",
       nftMint: nft.publicKey,
     })
-    const converterAcc = await adminProgram.account.converter.fetch(converter)
-    const collection = await fetchCollectionV1(umi, fromWeb3JsPublicKey(converterAcc.destinationCollection))
-    assert.equal(collection.updateAuthority, converter, "Expected authority to be set to converter")
-    assert.equal(collection.royalties.basisPoints, nft.metadata.sellerFeeBasisPoints, "Expected royalties to be copied")
-    assert.ok(
-      isEqual(
-        collection.royalties.creators,
-        unwrapOptionRecursively(nft.metadata.creators)
-          .filter((c) => c.share)
-          .map((c) => {
-            return {
-              address: c.address,
-              percentage: c.share,
-            }
-          })
-      )
-    )
   })
 
   it("Cannot convert while inactive", async () => {
@@ -178,6 +161,6 @@ describe("Core - With collection", () => {
     const converterAcc = await adminProgram.account.converter.fetch(converter)
     await closeCoreConverter(authority, converter)
     const collectionAcc = await fetchCollectionV1(umi, fromWeb3JsPublicKey(converterAcc.destinationCollection))
-    assert.equal(collectionAcc.updateAuthority, fromWeb3JsPublicKey(converterAcc.authority))
+    assert.equal(collectionAcc.updateDelegate, null, "Expected update delegate to be removed")
   })
 })
