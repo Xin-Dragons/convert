@@ -123,8 +123,10 @@ export default function Convert() {
     }
   }
 
+  console.log(converter)
+
   if (
-    converter.account.sourceCollection.equals(anchor.web3.PublicKey.default) &&
+    !converter.account.approved &&
     ![adminWallet, converter.account.authority.toBase58()].includes(wallet.publicKey?.toBase58()!)
   ) {
     return <ErrorMessage title="Not found" content="No active converter found at this URL" />
@@ -196,7 +198,7 @@ export default function Convert() {
           </CardFooter>
         </Card>
         <Modal
-          isOpen={converter.account.sourceCollection.toBase58() === anchor.web3.PublicKey.default.toBase58()}
+          isOpen={!converter.account.approved}
           className="main-theme text-foreground"
           isDismissable={false}
           classNames={{

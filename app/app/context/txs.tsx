@@ -2,7 +2,7 @@ import { PropsWithChildren, createContext, useContext, useState } from "react"
 import { useConvert } from "./convert"
 import { fromWeb3JsInstruction, fromWeb3JsPublicKey } from "@metaplex-foundation/umi-web3js-adapters"
 import { CollectionType, ConverterWithPublicKey } from "~/types/types"
-import { useUmi } from "./umi"
+import { UmiProvider, useUmi } from "./umi"
 import {
   DigitalAsset,
   MPL_TOKEN_METADATA_PROGRAM_ID,
@@ -22,6 +22,7 @@ import {
 import {
   KeypairSigner,
   PublicKey,
+  TransactionBuilder,
   generateSigner,
   publicKey,
   transactionBuilder,
@@ -41,6 +42,7 @@ import toast from "react-hot-toast"
 import { useNavigate } from "@remix-run/react"
 import { DAS } from "helius-sdk"
 import { FEES_WALLET } from "~/constants"
+import { MPL_CORE_PROGRAM_ID } from "@metaplex-foundation/mpl-core"
 
 const Context = createContext<
   | {
@@ -66,6 +68,14 @@ const Context = createContext<
         bgFile: File | null,
         ruleSet?: string
       ) => Promise<void>
+      createCoreConverter: (props: {
+        selectedNft: DAS.GetAssetResponse
+        name: string
+        slug: string
+        logoFile: File | null
+        bgFile: File | null
+        existingCollection: DigitalAsset | null
+      }) => Promise<void>
     }
   | undefined
 >(undefined)
@@ -82,38 +92,61 @@ export function TxsProvider({ children }: PropsWithChildren) {
       setLoading(true)
 
       const promise = Promise.resolve().then(async () => {
-        const collectionMint = fromWeb3JsPublicKey(converter.account.destinationCollection)
-        const collection = await fetchDigitalAsset(umi, collectionMint)
-        const collectionDelegateRecord = findMetadataDelegateRecord(
-          umi,
-          collection.publicKey,
-          collection?.metadata.updateAuthority,
-          fromWeb3JsPublicKey(converter.publicKey)
-        )
-        const authorizationRules = unwrapOptionRecursively(collection.metadata.programmableConfig)?.ruleSet || null
-        const isUa = collection.metadata.updateAuthority === umi.identity.publicKey
-        const tx = transactionBuilder().add({
-          instruction: fromWeb3JsInstruction(
-            await program.methods
-              .deleteConverter()
-              .accounts({
-                converter: converter.publicKey,
-                program: isUa ? null : program.programId,
-                programData: isUa ? null : findProgramDataAddress(umi),
-                programConfig: findProgramConfigPda(umi),
-                collectionMint,
-                collectionMetadata: collection.metadata.publicKey,
-                collectionDelegateRecord,
-                tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
-                authorizationRules,
-                authorizationRulesProgram: authorizationRules ? MPL_TOKEN_AUTH_RULES_PROGRAM_ID : null,
-                sysvarInstructions: getSysvar("instructions"),
-              })
-              .instruction()
-          ),
-          bytesCreatedOnChain: 0,
-          signers: [umi.identity],
-        })
+        let tx: TransactionBuilder = transactionBuilder()
+        if (converter.account.assetType.pnft) {
+          const collectionMint = fromWeb3JsPublicKey(converter.account.destinationCollection)
+          const collection = await fetchDigitalAsset(umi, collectionMint)
+          const collectionDelegateRecord = findMetadataDelegateRecord(
+            umi,
+            collection.publicKey,
+            collection?.metadata.updateAuthority,
+            fromWeb3JsPublicKey(converter.publicKey)
+          )
+          const authorizationRules = unwrapOptionRecursively(collection.metadata.programmableConfig)?.ruleSet || null
+          const isUa = collection.metadata.updateAuthority === umi.identity.publicKey
+          tx = tx.add({
+            instruction: fromWeb3JsInstruction(
+              await program.methods
+                .closeConverter()
+                .accounts({
+                  converter: converter.publicKey,
+                  program: isUa ? null : program.programId,
+                  programData: isUa ? null : findProgramDataAddress(umi),
+                  programConfig: findProgramConfigPda(umi),
+                  collectionMint,
+                  collectionMetadata: collection.metadata.publicKey,
+                  collectionDelegateRecord,
+                  tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                  authorizationRules,
+                  authorizationRulesProgram: authorizationRules ? MPL_TOKEN_AUTH_RULES_PROGRAM_ID : null,
+                  sysvarInstructions: getSysvar("instructions"),
+                })
+                .instruction()
+            ),
+            bytesCreatedOnChain: 0,
+            signers: [umi.identity],
+          })
+        } else if (converter.account.assetType.core) {
+          const isUa = converter.account.authority.toBase58() === umi.identity.publicKey
+          tx = tx.add({
+            instruction: fromWeb3JsInstruction(
+              await program.methods
+                .closeCoreConverter()
+                .accounts({
+                  programConfig: findProgramConfigPda(umi),
+                  updateAuthority: converter.account.authority,
+                  program: isUa ? null : program.programId,
+                  programData: isUa ? null : findProgramDataAddress(umi),
+                  converter: converter.publicKey,
+                  collection: converter.account.destinationCollection,
+                  coreProgram: MPL_CORE_PROGRAM_ID,
+                })
+                .instruction()
+            ),
+            bytesCreatedOnChain: 0,
+            signers: [umi.identity],
+          })
+        }
 
         const { chunks, txFee } = await packTx(umi, tx, feeLevel)
         const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
@@ -302,14 +335,10 @@ export function TxsProvider({ children }: PropsWithChildren) {
           tx = tx.add(getCloneCollectionInstruction(umi, existingCollection, destinationCollection as KeypairSigner))
         }
 
-        const method =
-          nftDa.metadata.updateAuthority === umi.identity.publicKey
-            ? program.methods.init
-            : program.methods.initUnapproved
-
         tx = tx.add({
           instruction: fromWeb3JsInstruction(
-            await method(name, slug, logo, bg)
+            await program.methods
+              .init(name, slug, logo, bg)
               .accounts({
                 programConfig: findProgramConfigPda(umi),
                 converter,
@@ -328,7 +357,7 @@ export function TxsProvider({ children }: PropsWithChildren) {
               .instruction()
           ),
           bytesCreatedOnChain:
-            8 + 32 + (4 + 50) + (4 + 50) + 32 + 32 + 1 + (1 + 4 + 52) + (1 + 4 + 52) + (1 + 4 + 50) + 1,
+            8 + 32 + (4 + 50) + (4 + 50) + 32 + 32 + 1 + (1 + 4 + 52) + (1 + 4 + 52) + (1 + 4 + 50) + 1 + 1 + 1,
           signers: [umi.identity],
         })
 
@@ -360,7 +389,7 @@ export function TxsProvider({ children }: PropsWithChildren) {
         const tx = transactionBuilder().add({
           instruction: fromWeb3JsInstruction(
             await program.methods
-              .approve()
+              .toggleApproved(true)
               .accounts({
                 converter: converter.publicKey,
                 program: program.programId,
@@ -434,6 +463,83 @@ export function TxsProvider({ children }: PropsWithChildren) {
     }
   }
 
+  async function createCoreConverter({
+    selectedNft,
+    name,
+    slug,
+    logoFile,
+    bgFile,
+    existingCollection,
+  }: {
+    selectedNft: DAS.GetAssetResponse
+    name: string
+    slug: string
+    logoFile: File | null
+    bgFile: File | null
+    existingCollection: DigitalAsset | null
+  }) {
+    try {
+      setLoading(true)
+      const promise = Promise.resolve().then(async () => {
+        let logo = null
+        let bg = null
+        if (logoFile || bgFile) {
+          const uploadPromise = uploadFiles(umi, logoFile, bgFile)
+
+          toast.promise(uploadPromise, {
+            loading: "Uploading assets",
+            success: "Uploaded successfully",
+            error: "Error uploading files",
+          })
+
+          const res = await uploadPromise
+          logo = res.logo
+          bg = res.bg
+        }
+
+        const collectionIdentifier = existingCollection?.publicKey
+        const converter = findConverterPda(umi, collectionIdentifier!)
+        const uri = existingCollection?.metadata.uri!
+        const da = await fetchDigitalAsset(umi, publicKey(selectedNft.id))
+        const destinationCollection = generateSigner(umi)
+        const tx = transactionBuilder().add({
+          instruction: fromWeb3JsInstruction(
+            await program.methods
+              .initCore(name, slug, uri, logo, bg)
+              .accounts({
+                programConfig: findProgramConfigPda(umi),
+                converter,
+                collectionIdentifier,
+                nftMint: da.publicKey,
+                nftMetadata: da.metadata.publicKey,
+                destinationCollection: destinationCollection.publicKey,
+                authority: umi.identity.publicKey,
+                coreProgram: MPL_CORE_PROGRAM_ID,
+              })
+              .instruction()
+          ),
+          bytesCreatedOnChain: 0,
+          signers: [umi.identity, destinationCollection],
+        })
+
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
+        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
+        return await sendAllTxsWithRetries(umi, program.provider.connection, signed, txFee ? 1 : 0)
+      })
+
+      toast.promise(promise, {
+        loading: "Creating Core converter",
+        success: "Core converter created",
+        error: (err) => displayErrorFromLog(err, "Error creating Core converter"),
+      })
+      await promise
+    } catch (err: any) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Context.Provider
       value={{
@@ -443,6 +549,7 @@ export function TxsProvider({ children }: PropsWithChildren) {
         createConverter,
         approve,
         update,
+        createCoreConverter,
       }}
     >
       {children}

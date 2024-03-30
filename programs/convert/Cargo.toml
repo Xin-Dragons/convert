@@ -19,6 +19,7 @@ default = []
 anchor-lang = {version = "0.29.0", features = ["init-if-needed"]}
 anchor-spl = {version = "0.29.0", features = ["metadata"]}
 mpl-candy-machine-core = {version = "3.0.1", features = ["no-entrypoint"]}
+mpl-core = "0.3.0"
 ahash = "=0.8.4"
 proc-macro-regex = "1.1.0"
 solana-program = "*"

@@ -5,6 +5,7 @@
     },
     "dependencies": {
         "@coral-xyz/anchor": "^0.29.0",
+        "@metaplex-foundation/mpl-core": "^0.3.0",
         "@metaplex-foundation/mpl-token-auth-rules": "^3.0.3",
         "@metaplex-foundation/mpl-token-metadata": "^3.2.0",
         "@metaplex-foundation/mpl-toolbox": "^0.9.4",

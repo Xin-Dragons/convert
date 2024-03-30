@@ -7,11 +7,14 @@ use instructions::*;
 
 pub const METAPLEX_RULE_SET: Pubkey = pubkey!("eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9");
 pub const FEES_WALLET: Pubkey = pubkey!("4dm8ndfR78PcQudJrS7TXM7R4qM3GAHpY87UtHnxovpa");
+pub const CORE_CONVERT_FEE: u64 = 5982000;
+pub const TOKEN_RECORD_RENT: u64 = 1447680;
 
 declare_id!("CNVRTNSn2fcmaVKRYRyXHFQaASXXDf1kvewfqTotve9c");
 
 #[program]
 pub mod convert {
+
     use self::instructions::init_handler;
 
     use super::*;
@@ -26,26 +29,35 @@ pub mod convert {
         init_handler(ctx, name, slug, logo, bg)
     }
 
-    pub fn init_unapproved(
-        ctx: Context<InitUnapproved>,
+    pub fn init_core(
+        ctx: Context<InitCore>,
         name: String,
         slug: String,
+        uri: String,
         logo: Option<String>,
         bg: Option<String>,
     ) -> Result<()> {
-        init_unapproved_handler(ctx, name, slug, logo, bg)
+        init_core_handler(ctx, name, slug, uri, logo, bg)
     }
 
     pub fn convert(ctx: Context<Convert>) -> Result<()> {
         convert_handler(ctx)
     }
 
+    pub fn convert_core(ctx: Context<ConvertCore>) -> Result<()> {
+        convert_core_handler(ctx)
+    }
+
+    pub fn close_core_converter(ctx: Context<CloseCoreConverter>) -> Result<()> {
+        close_core_converter_handler(ctx)
+    }
+
     pub fn init_program_config(ctx: Context<InitProgramConfig>, convert_fee: u64) -> Result<()> {
         init_program_config_handler(ctx, convert_fee)
     }
 
-    pub fn delete_converter(ctx: Context<DeleteConverter>) -> Result<()> {
-        delete_converter_handler(ctx)
+    pub fn close_converter(ctx: Context<CloseConverter>) -> Result<()> {
+        close_converter_handler(ctx)
     }
 
     pub fn toggle_active(ctx: Context<ToggleActive>, active: bool) -> Result<()> {
@@ -65,8 +77,8 @@ pub mod convert {
         update_converter_hander(ctx, name, logo, bg)
     }
 
-    pub fn approve(ctx: Context<Approve>) -> Result<()> {
-        approve_handler(ctx)
+    pub fn toggle_approved(ctx: Context<ToggleApproved>, approved: bool) -> Result<()> {
+        toggle_approved_handler(ctx, approved)
     }
 }
 
@@ -106,4 +118,22 @@ pub enum ConvertError {
     InvalidRuleSet,
     #[msg("This converter is currently inactive")]
     ConverterInactive,
+    #[msg("The collection metadata account is required for pNFT comnversions")]
+    CollectionMetadataRequired,
+    #[msg("The collection delegate record account is required for pNFT comnversions")]
+    CollectionDelegateRecordRequired,
+    #[msg("Incorrect account owner for this account")]
+    IncorrectAccountOwner,
+    #[msg("This asset type is not yet supported")]
+    UnsupportedAssetType,
+    #[msg("Delegate record not expected for this asset type")]
+    UnexpectedDelegateRecord,
+    #[msg("Collection metadata not expected for this asset type")]
+    UnexpectedCollectionMetadata,
+    #[msg("This converter has not yet been approved")]
+    ConverterNotApproved,
+    #[msg("This instruction cannot be used with this converter")]
+    InvalidInstruction,
+    #[msg("Could not add the given numbers")]
+    ProgramAddError,
 }

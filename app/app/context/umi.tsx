@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react"
 import { ReactNode, createContext, useContext } from "react"
 import { irysUploader } from "@metaplex-foundation/umi-uploader-irys"
 import { mplToolbox } from "@metaplex-foundation/mpl-toolbox"
+import { mplCore } from "@metaplex-foundation/mpl-core"
 
 const Context = createContext<Umi | undefined>(undefined)
 
@@ -16,6 +17,7 @@ export function UmiProvider({ children, rpcHost }: { children: ReactNode; rpcHos
   })
     .use(mplToolbox())
     .use(mplTokenMetadata())
+    .use(mplCore())
     .use(walletAdapterIdentity(wallet))
     .use(irysUploader())
   return <Context.Provider value={umi}>{children}</Context.Provider>

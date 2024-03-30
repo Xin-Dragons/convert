@@ -16,7 +16,7 @@ use anchor_spl::{
 };
 
 use crate::{
-    state::{Converter, ProgramConfig},
+    state::{AssetType, Converter, ProgramConfig},
     ConvertError, FEES_WALLET, METAPLEX_RULE_SET,
 };
 
@@ -35,6 +35,7 @@ pub struct Convert<'info> {
         ],
         bump = converter.bump,
         constraint = converter.active @ ConvertError::ConverterInactive,
+        constraint = converter.approved @ ConvertError::ConverterNotApproved
     )]
     converter: Account<'info, Converter>,
 
@@ -290,6 +291,11 @@ pub fn convert_handler(ctx: Context<Convert>) -> Result<()> {
     let program_config = &ctx.accounts.program_config;
     let fees_wallet = &ctx.accounts.fees_wallet;
     let nft_metadata = &ctx.accounts.nft_metadata;
+
+    require!(
+        matches!(converter.asset_type, AssetType::Pnft),
+        ConvertError::InvalidInstruction
+    );
 
     if nft_metadata.collection.is_some() && nft_metadata.collection.as_ref().unwrap().verified {
         let collection = nft_metadata.collection.as_ref().unwrap();

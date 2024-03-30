@@ -2568,6 +2568,11 @@
   resolved "https://registry.npmjs.org/@metaplex-foundation/cusper/-/cusper-0.0.2.tgz"
   integrity sha512-S9RulC2fFCFOQraz61bij+5YCHhSO9llJegK8c8Y6731fSi6snUSQJdCUqYS8AIgR0TKbQvdvgSyIIdbDFZbBA==
 
+"@metaplex-foundation/mpl-core@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.npmjs.org/@metaplex-foundation/mpl-core/-/mpl-core-0.3.0.tgz"
+  integrity sha512-ZGK4sVSlRWLkZQpYzctEF978lCOXKTy73Jr7IKIFXK3C2xGLEg4GRuN/SBtByQA5u/vxqkAp04ZiVXhoVWtJSQ==
+
 "@metaplex-foundation/mpl-token-auth-rules@^3.0.3":
   version "3.0.3"
   resolved "https://registry.npmjs.org/@metaplex-foundation/mpl-token-auth-rules/-/mpl-token-auth-rules-3.0.3.tgz"
@@ -2595,7 +2600,7 @@
   dependencies:
     "@metaplex-foundation/mpl-toolbox" "^0.9.4"
 
-"@metaplex-foundation/mpl-toolbox@^0.9.4":
+"@metaplex-foundation/mpl-toolbox@^0.8.0", "@metaplex-foundation/mpl-toolbox@^0.9.4":
   version "0.9.4"
   resolved "https://registry.npmjs.org/@metaplex-foundation/mpl-toolbox/-/mpl-toolbox-0.9.4.tgz"
   integrity sha512-fd6JxfoLbj/MM8FG2x91KYVy1U6AjBQw4qjt7+Da3trzQaWnSaYHDcYRG/53xqfvZ9qofY1T2t53GXPlD87lnQ==
@@ -2729,7 +2734,7 @@
   dependencies:
     buffer "^6.0.3"
 
-"@metaplex-foundation/umi@^0.9.1", "@metaplex-foundation/umi@>= 0.8.2 < 1":
+"@metaplex-foundation/umi@^0.8.2", "@metaplex-foundation/umi@^0.9.1", "@metaplex-foundation/umi@>= 0.8.2 < 1":
   version "0.9.1"
   resolved "https://registry.npmjs.org/@metaplex-foundation/umi/-/umi-0.9.1.tgz"
   integrity sha512-IhHoOvp4vfO/++YL+78+iVuLM53+FDwUOZDYgH6lx0jYXyQ27BeaieeR5i+q3A9dz4KxQo5Nzc5aCA1109QGCQ==

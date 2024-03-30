@@ -124,7 +124,7 @@ export type Convert = {
       ]
     },
     {
-      "name": "initUnapproved",
+      "name": "initCore",
       "accounts": [
         {
           "name": "programConfig",
@@ -134,11 +134,6 @@ export type Convert = {
         {
           "name": "converter",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "collectionIdentifier",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -152,23 +147,19 @@ export type Convert = {
           "isSigner": false
         },
         {
-          "name": "destinationCollectionMint",
+          "name": "collectionIdentifier",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "destinationCollectionMetadata",
+          "name": "destinationCollection",
           "isMut": true,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "collectionDelegateRecord",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Metadata delegate record. The delegate is used to verify NFTs.",
-            ""
-          ]
+          "name": "coreProgram",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "authority",
@@ -179,46 +170,6 @@ export type Convert = {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
-        },
-        {
-          "name": "tokenMetadataProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "ruleSet",
-          "isMut": false,
-          "isSigner": false,
-          "isOptional": true
-        },
-        {
-          "name": "sysvarInstructions",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "Instructions sysvar account.",
-            ""
-          ]
-        },
-        {
-          "name": "authorizationRulesProgram",
-          "isMut": false,
-          "isSigner": false,
-          "isOptional": true,
-          "docs": [
-            "Token Authorization Rules program.",
-            ""
-          ]
-        },
-        {
-          "name": "authorizationRules",
-          "isMut": false,
-          "isSigner": false,
-          "isOptional": true,
-          "docs": [
-            "Token Authorization rules account for the collection metadata (if any).",
-            ""
-          ]
         }
       ],
       "args": [
@@ -228,6 +179,10 @@ export type Convert = {
         },
         {
           "name": "slug",
+          "type": "string"
+        },
+        {
+          "name": "uri",
           "type": "string"
         },
         {
@@ -367,6 +322,165 @@ export type Convert = {
       "args": []
     },
     {
+      "name": "convertCore",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "feesWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "masterEdition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenRecord",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collectionMetadata",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "nftSource",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "newMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "newCollectionMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "metadataProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "coreProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK constrained to single programId"
+          ]
+        },
+        {
+          "name": "sysvarInstructions",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "closeCoreConverter",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collection",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "coreProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initProgramConfig",
       "accounts": [
         {
@@ -403,7 +517,7 @@ export type Convert = {
       ]
     },
     {
-      "name": "deleteConverter",
+      "name": "closeConverter",
       "accounts": [
         {
           "name": "programConfig",
@@ -571,7 +685,7 @@ export type Convert = {
       ]
     },
     {
-      "name": "approve",
+      "name": "toggleApproved",
       "accounts": [
         {
           "name": "converter",
@@ -599,7 +713,12 @@ export type Convert = {
           "isSigner": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "approved",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -692,6 +811,22 @@ export type Convert = {
               "the bump of the converter (1)"
             ],
             "type": "u8"
+          },
+          {
+            "name": "assetType",
+            "docs": [
+              "the asset type of the output (1)"
+            ],
+            "type": {
+              "defined": "AssetType"
+            }
+          },
+          {
+            "name": "approved",
+            "docs": [
+              "is this converter approved for use (1)"
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -723,6 +858,25 @@ export type Convert = {
               "the bump of the program_config account (1)"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "AssetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pnft"
+          },
+          {
+            "name": "Core"
+          },
+          {
+            "name": "Nifty"
           }
         ]
       }
@@ -813,6 +967,51 @@ export type Convert = {
       "code": 6016,
       "name": "ConverterInactive",
       "msg": "This converter is currently inactive"
+    },
+    {
+      "code": 6017,
+      "name": "CollectionMetadataRequired",
+      "msg": "The collection metadata account is required for pNFT comnversions"
+    },
+    {
+      "code": 6018,
+      "name": "CollectionDelegateRecordRequired",
+      "msg": "The collection delegate record account is required for pNFT comnversions"
+    },
+    {
+      "code": 6019,
+      "name": "IncorrectAccountOwner",
+      "msg": "Incorrect account owner for this account"
+    },
+    {
+      "code": 6020,
+      "name": "UnsupportedAssetType",
+      "msg": "This asset type is not yet supported"
+    },
+    {
+      "code": 6021,
+      "name": "UnexpectedDelegateRecord",
+      "msg": "Delegate record not expected for this asset type"
+    },
+    {
+      "code": 6022,
+      "name": "UnexpectedCollectionMetadata",
+      "msg": "Collection metadata not expected for this asset type"
+    },
+    {
+      "code": 6023,
+      "name": "ConverterNotApproved",
+      "msg": "This converter has not yet been approved"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidInstruction",
+      "msg": "This instruction cannot be used with this converter"
+    },
+    {
+      "code": 6025,
+      "name": "ProgramAddError",
+      "msg": "Could not add the given numbers"
     }
   ]
 };
@@ -943,7 +1142,7 @@ export const IDL: Convert = {
       ]
     },
     {
-      "name": "initUnapproved",
+      "name": "initCore",
       "accounts": [
         {
           "name": "programConfig",
@@ -953,11 +1152,6 @@ export const IDL: Convert = {
         {
           "name": "converter",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "collectionIdentifier",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -971,23 +1165,19 @@ export const IDL: Convert = {
           "isSigner": false
         },
         {
-          "name": "destinationCollectionMint",
+          "name": "collectionIdentifier",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "destinationCollectionMetadata",
+          "name": "destinationCollection",
           "isMut": true,
-          "isSigner": false
+          "isSigner": true
         },
         {
-          "name": "collectionDelegateRecord",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Metadata delegate record. The delegate is used to verify NFTs.",
-            ""
-          ]
+          "name": "coreProgram",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "authority",
@@ -998,46 +1188,6 @@ export const IDL: Convert = {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
-        },
-        {
-          "name": "tokenMetadataProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "ruleSet",
-          "isMut": false,
-          "isSigner": false,
-          "isOptional": true
-        },
-        {
-          "name": "sysvarInstructions",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "Instructions sysvar account.",
-            ""
-          ]
-        },
-        {
-          "name": "authorizationRulesProgram",
-          "isMut": false,
-          "isSigner": false,
-          "isOptional": true,
-          "docs": [
-            "Token Authorization Rules program.",
-            ""
-          ]
-        },
-        {
-          "name": "authorizationRules",
-          "isMut": false,
-          "isSigner": false,
-          "isOptional": true,
-          "docs": [
-            "Token Authorization rules account for the collection metadata (if any).",
-            ""
-          ]
         }
       ],
       "args": [
@@ -1047,6 +1197,10 @@ export const IDL: Convert = {
         },
         {
           "name": "slug",
+          "type": "string"
+        },
+        {
+          "name": "uri",
           "type": "string"
         },
         {
@@ -1186,6 +1340,165 @@ export const IDL: Convert = {
       "args": []
     },
     {
+      "name": "convertCore",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "feesWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "masterEdition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenRecord",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collectionMetadata",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "nftSource",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "newMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "newCollectionMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "metadataProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "coreProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK constrained to single programId"
+          ]
+        },
+        {
+          "name": "sysvarInstructions",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "closeCoreConverter",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collection",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "coreProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initProgramConfig",
       "accounts": [
         {
@@ -1222,7 +1535,7 @@ export const IDL: Convert = {
       ]
     },
     {
-      "name": "deleteConverter",
+      "name": "closeConverter",
       "accounts": [
         {
           "name": "programConfig",
@@ -1390,7 +1703,7 @@ export const IDL: Convert = {
       ]
     },
     {
-      "name": "approve",
+      "name": "toggleApproved",
       "accounts": [
         {
           "name": "converter",
@@ -1418,7 +1731,12 @@ export const IDL: Convert = {
           "isSigner": true
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "approved",
+          "type": "bool"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -1511,6 +1829,22 @@ export const IDL: Convert = {
               "the bump of the converter (1)"
             ],
             "type": "u8"
+          },
+          {
+            "name": "assetType",
+            "docs": [
+              "the asset type of the output (1)"
+            ],
+            "type": {
+              "defined": "AssetType"
+            }
+          },
+          {
+            "name": "approved",
+            "docs": [
+              "is this converter approved for use (1)"
+            ],
+            "type": "bool"
           }
         ]
       }
@@ -1542,6 +1876,25 @@ export const IDL: Convert = {
               "the bump of the program_config account (1)"
             ],
             "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "AssetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pnft"
+          },
+          {
+            "name": "Core"
+          },
+          {
+            "name": "Nifty"
           }
         ]
       }
@@ -1632,6 +1985,51 @@ export const IDL: Convert = {
       "code": 6016,
       "name": "ConverterInactive",
       "msg": "This converter is currently inactive"
+    },
+    {
+      "code": 6017,
+      "name": "CollectionMetadataRequired",
+      "msg": "The collection metadata account is required for pNFT comnversions"
+    },
+    {
+      "code": 6018,
+      "name": "CollectionDelegateRecordRequired",
+      "msg": "The collection delegate record account is required for pNFT comnversions"
+    },
+    {
+      "code": 6019,
+      "name": "IncorrectAccountOwner",
+      "msg": "Incorrect account owner for this account"
+    },
+    {
+      "code": 6020,
+      "name": "UnsupportedAssetType",
+      "msg": "This asset type is not yet supported"
+    },
+    {
+      "code": 6021,
+      "name": "UnexpectedDelegateRecord",
+      "msg": "Delegate record not expected for this asset type"
+    },
+    {
+      "code": 6022,
+      "name": "UnexpectedCollectionMetadata",
+      "msg": "Collection metadata not expected for this asset type"
+    },
+    {
+      "code": 6023,
+      "name": "ConverterNotApproved",
+      "msg": "This converter has not yet been approved"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidInstruction",
+      "msg": "This instruction cannot be used with this converter"
+    },
+    {
+      "code": 6025,
+      "name": "ProgramAddError",
+      "msg": "Could not add the given numbers"
     }
   ]
 };

@@ -1,30 +1,23 @@
-import * as anchor from "@coral-xyz/anchor"
 import {
   DigitalAsset,
-  MPL_TOKEN_METADATA_PROGRAM_ID,
   TokenStandard,
   fetchDigitalAsset,
-  fetchMetadataDelegateRecord,
-  findMetadataPda,
   verifyCreatorV1,
 } from "@metaplex-foundation/mpl-token-metadata"
-import { createCollection } from "./helpers/create-collection"
 import { KeypairSigner, PublicKey, generateSigner, unwrapOptionRecursively } from "@metaplex-foundation/umi"
-import { umi } from "./helpers/umi"
-import { adminProgram, createNewUser, programPaidBy } from "./helper"
-import { createNft } from "./helpers/create-nft"
-import { convert, initUnapproved } from "./helpers/instructions"
+import { umi } from "../helpers/umi"
+import { adminProgram, createNewUser, programPaidBy } from "../helper"
+import { createNft } from "../helpers/create-nft"
+import { closeConverter, convert, init } from "../helpers/instructions"
 import {
   findConverterPda,
   findMetadataDelegateRecord,
   findProgramConfigPda,
   findProgramDataAddress,
-} from "./helpers/pdas"
+} from "../helpers/pdas"
 import { assert } from "chai"
-import { assertErrorCode, expectFail } from "./helpers/utils"
+import { assertErrorCode, expectFail } from "../helpers/utils"
 import { fromWeb3JsPublicKey } from "@metaplex-foundation/umi-web3js-adapters"
-import { MPL_TOKEN_AUTH_RULES_PROGRAM_ID } from "@metaplex-foundation/mpl-token-auth-rules"
-import { getSysvar } from "@metaplex-foundation/mpl-toolbox"
 
 describe("non-ua", () => {
   const creator = generateSigner(umi)
@@ -66,7 +59,7 @@ describe("non-ua", () => {
   })
 
   it("can create a new converter as non-ua", async () => {
-    await initUnapproved({
+    await init({
       user,
       title: "Non approved",
       slug: "semi_created",
@@ -76,16 +69,17 @@ describe("non-ua", () => {
     })
 
     const acc = await adminProgram.account.converter.fetch(converter)
-    assert.ok(
-      acc.sourceCollection.equals(anchor.web3.PublicKey.default),
-      "Expected source collection to equal the default pk"
-    )
+    assert.equal(acc.approved, false, "Expected converter to not be approved yet")
+  })
+
+  it("Can activate the converter", async () => {
+    await programPaidBy(user).methods.toggleActive(true).accounts({ converter }).rpc()
   })
 
   it("Cannot convert", async () => {
     await expectFail(
       () => convert(user2, converter, nft),
-      (err) => assertErrorCode(err, "ConstraintSeeds")
+      (err) => assertErrorCode(err, "ConverterNotApproved")
     )
   })
 
@@ -93,7 +87,7 @@ describe("non-ua", () => {
     await expectFail(
       () =>
         programPaidBy(user)
-          .methods.approve()
+          .methods.toggleApproved(true)
           .accounts({
             converter,
             program: adminProgram.programId,
@@ -107,7 +101,7 @@ describe("non-ua", () => {
 
   it("can approve an unapproved converter as sysadmin", async () => {
     await adminProgram.methods
-      .approve()
+      .toggleApproved(true)
       .accounts({
         converter,
         program: adminProgram.programId,
@@ -118,10 +112,6 @@ describe("non-ua", () => {
 
     const acc = await adminProgram.account.converter.fetch(converter)
     assert.equal(acc.sourceCollection.toBase58(), creator.publicKey)
-  })
-
-  it("Can activate the converter", async () => {
-    await programPaidBy(user).methods.toggleActive(true).accounts({ converter }).rpc()
   })
 
   it("can convert an NFT", async () => {
@@ -143,25 +133,8 @@ describe("non-ua", () => {
       collection.metadata.updateAuthority,
       converter
     )
-    const authorizationRules = unwrapOptionRecursively(collection.metadata.programmableConfig).ruleSet || null
     const accBefore = await umi.rpc.getAccount(findProgramConfigPda())
-    await adminProgram.methods
-      .deleteConverter()
-      .accounts({
-        programConfig: findProgramConfigPda(),
-        program: adminProgram.programId,
-        programData: findProgramDataAddress(),
-        converter,
-        collectionMint,
-        collectionMetadata: findMetadataPda(umi, { mint: collectionMint })[0],
-        collectionDelegateRecord,
-        authorizationRules,
-        authorizationRulesProgram: authorizationRules ? MPL_TOKEN_AUTH_RULES_PROGRAM_ID : null,
-        tokenMetadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
-        sysvarInstructions: getSysvar("instructions"),
-      })
-      .rpc()
-      .catch((err) => console.log(err))
+    await closeConverter({ user: undefined, converter, program: adminProgram })
 
     const accAfter = await umi.rpc.getAccount(findProgramConfigPda())
     assert.equal(

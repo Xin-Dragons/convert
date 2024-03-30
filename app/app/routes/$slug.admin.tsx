@@ -12,6 +12,7 @@ import { ImageUpload } from "~/components/ImageUpload"
 import { PanelCard } from "~/components/PanelCard"
 import { Popover } from "~/components/Popover"
 import { Title } from "~/components/Title"
+import { adminWallet } from "~/constants"
 import { useConvert } from "~/context/convert"
 import { DigitalAssetsProvider } from "~/context/digital-assets"
 import { useTheme } from "~/context/theme"
@@ -111,7 +112,7 @@ export default function ConverterAdmin() {
     return <ErrorMessage title="Wallet disconnected" content="Please connect your wallet to access this page" />
   }
 
-  if (wallet.publicKey.toBase58() !== converter.account.authority.toBase58()) {
+  if (![converter.account.authority.toBase58(), adminWallet].includes(wallet.publicKey.toBase58())) {
     return <ErrorMessage title="Unauthorised" content="Only the converter admin can access this page" />
   }
 

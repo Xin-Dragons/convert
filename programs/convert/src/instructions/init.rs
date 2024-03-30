@@ -1,17 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     metadata::{Metadata, MetadataAccount},
-    token::{Mint, Token},
+    token::Mint,
 };
 use mpl_candy_machine_core::{
     approve_metadata_delegate, constants::MPL_TOKEN_AUTH_RULES_PROGRAM,
-    ApproveMetadataDelegateHelperAccounts, RevokeMetadataDelegateHelperAccounts,
+    ApproveMetadataDelegateHelperAccounts,
 };
 use solana_program::sysvar;
 
 use crate::{
-    program::Convert,
-    state::{Converter, ProgramConfig},
+    state::{AssetType, Converter, ProgramConfig},
     ConvertError,
 };
 
@@ -86,10 +85,7 @@ pub struct Init<'info> {
     #[account(mut)]
     collection_delegate_record: UncheckedAccount<'info>,
 
-    #[account(
-        mut,
-        constraint = nft_metadata.update_authority == authority.key() @ ConvertError::UnauthorisedUA
-    )]
+    #[account(mut)]
     authority: Signer<'info>,
 
     system_program: Program<'info, System>,
@@ -217,6 +213,8 @@ pub fn init_handler(
             .as_ref()
             .map(|rule_set| rule_set.key()),
         ctx.bumps.converter,
+        AssetType::Pnft,
+        metadata.update_authority == ctx.accounts.authority.key(),
     );
     Ok(())
 }

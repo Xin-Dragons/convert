@@ -1,14 +1,14 @@
 import * as anchor from "@coral-xyz/anchor"
 import { DigitalAsset, verifyCreatorV1 } from "@metaplex-foundation/mpl-token-metadata"
 import { KeypairSigner, PublicKey, generateSigner } from "@metaplex-foundation/umi"
-import { Convert } from "../target/types/convert"
-import { createNewUser, programPaidBy } from "./helper"
-import { createCollection } from "./helpers/create-collection"
-import { umi } from "./helpers/umi"
-import { createNft } from "./helpers/create-nft"
-import { findConverterPda } from "./helpers/pdas"
-import { assertErrorCode, expectFail } from "./helpers/utils"
-import { convert, init } from "./helpers/instructions"
+import { Convert } from "../../target/types/convert"
+import { createNewUser, programPaidBy } from "../helper"
+import { createCollection } from "../helpers/create-collection"
+import { umi } from "../helpers/umi"
+import { createNft } from "../helpers/create-nft"
+import { findConverterPda } from "../helpers/pdas"
+import { assertErrorCode, expectFail } from "../helpers/utils"
+import { convert, init } from "../helpers/instructions"
 
 describe("creator", () => {
   let user: KeypairSigner
@@ -50,21 +50,6 @@ describe("creator", () => {
       metadata: nft.metadata.publicKey,
     }).sendAndConfirm(umi)
     converter = findConverterPda(creator.publicKey)
-  })
-
-  it("Cannot create a converter if not UA", async () => {
-    await expectFail(
-      () =>
-        init({
-          user,
-          title: "Test project",
-          slug: "creator_project",
-          logo: "12345",
-          bg: "12345",
-          nftMint: nft.publicKey,
-        }),
-      (err) => assertErrorCode(err, "UnauthorisedUA")
-    )
   })
 
   it("can create a converter as the UA", async () => {

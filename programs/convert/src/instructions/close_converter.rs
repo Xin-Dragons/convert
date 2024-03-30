@@ -10,12 +10,12 @@ use solana_program::sysvar;
 
 use crate::{
     program::Convert,
-    state::{Converter, ProgramConfig},
+    state::{AssetType, Converter, ProgramConfig},
     ConvertError,
 };
 
 #[derive(Accounts)]
-pub struct DeleteConverter<'info> {
+pub struct CloseConverter<'info> {
     #[account(
         mut,
         seeds = [
@@ -83,9 +83,13 @@ pub struct DeleteConverter<'info> {
     sysvar_instructions: UncheckedAccount<'info>,
 }
 
-pub fn delete_converter_handler(ctx: Context<DeleteConverter>) -> Result<()> {
+pub fn close_converter_handler(ctx: Context<CloseConverter>) -> Result<()> {
     let converter = &ctx.accounts.converter;
     let slugs: Vec<String> = ctx.accounts.program_config.slugs.clone();
+
+    if !matches!(converter.asset_type, AssetType::Pnft) {
+        return err!(ConvertError::InvalidInstruction);
+    }
 
     // if signer is UA, revoke the metadata auth. If not, they can do it later
     if ctx.accounts.collection_metadata.update_authority == ctx.accounts.authority.key() {

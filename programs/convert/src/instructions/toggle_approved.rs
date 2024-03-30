@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{program::Convert, state::Converter, ConvertError};
 
 #[derive(Accounts)]
-pub struct Approve<'info> {
+pub struct ToggleApproved<'info> {
     #[account(
         mut,
         seeds = [
@@ -31,9 +31,9 @@ pub struct Approve<'info> {
     authority: Signer<'info>,
 }
 
-pub fn approve_handler(ctx: Context<Approve>) -> Result<()> {
+pub fn toggle_approved_handler(ctx: Context<ToggleApproved>, approved: bool) -> Result<()> {
     let converter = &mut ctx.accounts.converter;
 
-    converter.source_collection = ctx.accounts.collection_identifier.key();
+    converter.approved = approved;
     Ok(())
 }

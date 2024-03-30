@@ -9,6 +9,7 @@ import axios from "axios"
 import { DAS } from "helius-sdk"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
+import { CustomRadio } from "~/components/CustomRadio"
 import { ErrorMessage } from "~/components/ErrorMessage"
 import { ImageUpload } from "~/components/ImageUpload"
 import { NftSelectorModal } from "~/components/NftSelector"
@@ -19,12 +20,12 @@ import { DigitalAssetsProvider } from "~/context/digital-assets"
 import { useTheme } from "~/context/theme"
 import { useTxs } from "~/context/txs"
 import { useUmi } from "~/context/umi"
-import { CollectionType } from "~/types/types"
+import { AssetType, CollectionType } from "~/types/types"
 
 export default function Create() {
   const wallet = useWallet()
   const { theme, setTheme } = useTheme()
-  const { loading, createConverter } = useTxs()
+  const { loading, createConverter, createCoreConverter } = useTxs()
   const [slug, setSlug] = useState("")
   const [name, setName] = useState("")
   const umi = useUmi()
@@ -42,23 +43,36 @@ export default function Create() {
   const [collection, setCollection] = useState<DigitalAsset | null>(null)
   const [existingCollection, setExistingCollection] = useState<DigitalAsset | null>(null)
   const [collectionType, setCollectionType] = useState<CollectionType>("existing")
+  const [assetType, setAssetType] = useState<AssetType>(AssetType.CORE)
 
   async function create() {
     if (!selectedNft) {
       toast.error("Select an NFT to set up the converter")
       return
     }
-    await createConverter({
-      selectedNft,
-      collectionType,
-      name,
-      slug,
-      logoFile,
-      bgFile,
-      collection,
-      existingCollection,
-      ruleSet: ruleSet ? publicKey(ruleSet) : null,
-    })
+    if (assetType === AssetType.PNFT) {
+      await createConverter({
+        selectedNft,
+        collectionType,
+        name,
+        slug,
+        logoFile,
+        bgFile,
+        collection,
+        existingCollection,
+        ruleSet: ruleSet ? publicKey(ruleSet) : null,
+      })
+    } else if (assetType === AssetType.CORE) {
+      console.log("creating core converter")
+      await createCoreConverter({
+        selectedNft,
+        name,
+        slug,
+        logoFile,
+        bgFile,
+        existingCollection,
+      })
+    }
   }
 
   useEffect(() => {
@@ -100,11 +114,6 @@ export default function Create() {
       try {
         const nftPubkey = publicKey(nftPk)
         const da = await fetchDigitalAsset(umi, nftPubkey)
-
-        const tokenStandard = unwrapOptionRecursively(da.metadata.tokenStandard)
-        if (tokenStandard !== null && tokenStandard !== TokenStandard.NonFungible) {
-          throw new Error("Only legacy NFTs can be converted")
-        }
 
         const collection = unwrapOptionRecursively(da.metadata.collection)
         if (collection?.verified) {
@@ -310,7 +319,8 @@ export default function Create() {
             {selectedNft && (
               <div className="flex flex-col gap-3 bg-content2 p-3 rounded-xl">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-xl">Destination collection</h3>
+                  <h3 className="text-xl">Conversion details</h3>
+
                   {existingCollection && (
                     <p className="text-base">
                       Existing MCC:{" "}
@@ -325,48 +335,72 @@ export default function Create() {
                   )}
                 </div>
 
-                <p className="text-xs">
-                  {existingCollection ? (
-                    <p>
-                      This is the new collection used to group the minted pNFTs. You can use the same collection, clone
-                      the existing MCC, or provide a new collection mint address below.
-                      <br />
-                      <br />
-                      We recommend using the existing MCC where possible, for maximum integration with marketplaces and
-                      third party apps.
-                    </p>
-                  ) : (
-                    <span>
-                      No existing collection found, You can create a new Metaplex Certified Collection (MCC) using{" "}
-                      <NextUiLink
-                        href="https://biblio.tech/tools/nft-suite"
-                        className="text-tiny"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Biblio.tech
-                      </NextUiLink>
-                    </span>
-                  )}
-                </p>
                 <RadioGroup
-                  label="Collection for converted pNFTs"
-                  value={collectionType}
-                  onValueChange={(value) => setCollectionType(value as CollectionType)}
+                  label="Output asset type"
+                  value={assetType}
+                  onValueChange={(val) => setAssetType(val as AssetType)}
+                  orientation="horizontal"
                 >
-                  <Radio
-                    value="existing"
-                    isDisabled={
-                      !existingCollection || existingCollection.metadata.updateAuthority !== wallet.publicKey.toBase58()
-                    }
-                  >
-                    Use existing collection
-                  </Radio>
-                  <Radio value="clone" isDisabled={!existingCollection}>
-                    Clone into new collection
-                  </Radio>
-                  <Radio value="new">Provide new collection</Radio>
+                  <CustomRadio value={AssetType.CORE}>Metaplex Core</CustomRadio>
+                  <CustomRadio value={AssetType.PNFT}>Metaplex pNFT</CustomRadio>
                 </RadioGroup>
+
+                {assetType === AssetType.CORE && (
+                  <p className="text-xs">
+                    A new Core collection will be created to group together the newly minted Core assets. This will be
+                    owned by the <Title /> program until the conversion process is concluded.
+                  </p>
+                )}
+
+                {assetType === AssetType.PNFT && (
+                  <p className="text-xs">
+                    {existingCollection ? (
+                      <p>
+                        This is the new collection used to group the minted pNFTs. You can use the same collection,
+                        clone the existing MCC, or provide a new collection mint address below.
+                        <br />
+                        <br />
+                        We recommend using the existing MCC where possible, for maximum integration with marketplaces
+                        and third party apps.
+                      </p>
+                    ) : (
+                      <span>
+                        No existing collection found, You can create a new Metaplex Certified Collection (MCC) using{" "}
+                        <NextUiLink
+                          href="https://biblio.tech/tools/nft-suite"
+                          className="text-tiny"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Biblio.tech
+                        </NextUiLink>
+                      </span>
+                    )}
+                  </p>
+                )}
+
+                {assetType === AssetType.PNFT && (
+                  <RadioGroup
+                    label="Collection for converted pNFTs"
+                    value={collectionType}
+                    onValueChange={(value) => setCollectionType(value as CollectionType)}
+                  >
+                    <Radio
+                      value="existing"
+                      isDisabled={
+                        !existingCollection ||
+                        existingCollection.metadata.updateAuthority !== wallet.publicKey.toBase58()
+                      }
+                    >
+                      Use existing collection
+                    </Radio>
+                    <Radio value="clone" isDisabled={!existingCollection}>
+                      Clone into new collection
+                    </Radio>
+                    <Radio value="new">Provide new collection</Radio>
+                  </RadioGroup>
+                )}
+
                 <div className="flex gap-3">
                   {collectionType === "new" && (
                     <Input
@@ -402,41 +436,43 @@ export default function Create() {
                     />
                   )}
                 </div>
+
+                {assetType === AssetType.PNFT && (
+                  <Input
+                    label="Rule set"
+                    value={ruleSet}
+                    onValueChange={setRuleSet}
+                    variant="bordered"
+                    errorMessage={ruleSetError}
+                    description="Leave blank to use the default Metaplex managed ruleset"
+                    endContent={
+                      <Popover
+                        title="Rule Set"
+                        placement="left"
+                        large
+                        content={
+                          <p>
+                            Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific
+                            programs or accounts. Leave blank to assign the default Metaplex rule set
+                            <br />
+                            <br />
+                            You can create a new ruleset using{" "}
+                            <NextUiLink
+                              href="https://royalties.metaplex.com/"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs"
+                            >
+                              Metaplex's royalty tool
+                            </NextUiLink>
+                          </p>
+                        }
+                      />
+                    }
+                  />
+                )}
               </div>
             )}
-
-            <Input
-              label="Rule set"
-              value={ruleSet}
-              onValueChange={setRuleSet}
-              variant="bordered"
-              errorMessage={ruleSetError}
-              description="Leave blank to use the default Metaplex managed ruleset"
-              endContent={
-                <Popover
-                  title="Rule Set"
-                  placement="left"
-                  large
-                  content={
-                    <p>
-                      Add a custom rule set if you want to define a bespoke allowlist/blocklist to block specific
-                      programs or accounts. Leave blank to assign the default Metaplex rule set
-                      <br />
-                      <br />
-                      You can create a new ruleset using{" "}
-                      <NextUiLink
-                        href="https://royalties.metaplex.com/"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs"
-                      >
-                        Metaplex's royalty tool
-                      </NextUiLink>
-                    </p>
-                  }
-                />
-              }
-            />
 
             <NftSelectorModal
               modalOpen={nftModalOpen}

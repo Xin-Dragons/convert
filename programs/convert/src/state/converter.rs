@@ -1,5 +1,12 @@
 use anchor_lang::prelude::*;
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
+pub enum AssetType {
+    Pnft,
+    Core,
+    Nifty,
+}
+
 #[account]
 pub struct Converter {
     /// authority wallet (32)
@@ -24,6 +31,10 @@ pub struct Converter {
     pub custom_domain: Option<String>,
     /// the bump of the converter (1)
     pub bump: u8,
+    /// the asset type of the output (1)
+    pub asset_type: AssetType,
+    /// is this converter approved for use (1)
+    pub approved: bool,
 }
 
 impl Converter {
@@ -38,6 +49,8 @@ impl Converter {
         + (1 + 4 + 52)
         + (1 + 4 + 52)
         + (1 + 4 + 50)
+        + 1
+        + 1
         + 1;
 
     pub fn init(
@@ -50,6 +63,8 @@ impl Converter {
         destination_collection: Pubkey,
         rule_set: Option<Pubkey>,
         bump: u8,
+        asset_type: AssetType,
+        approved: bool,
     ) -> Self {
         Self {
             name,
@@ -63,6 +78,8 @@ impl Converter {
             active: false,
             rule_set,
             bump,
+            asset_type,
+            approved,
         }
     }
 }
