@@ -8,21 +8,20 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use mpl_core::{instructions::CreateV1CpiBuilder as CoreCpiBuilder, ID as CoreID};
+use nifty_asset::{
+    extensions::{ExtensionBuilder, MetadataBuilder},
+    instructions::CreateCpiBuilder,
+    types::{ExtensionInput, ExtensionType},
+    ID as NiftyID,
+};
 
 use crate::{
-    state::{AssetType, Converter, ProgramConfig},
-    ConvertError, CORE_CONVERT_FEE, FEES_WALLET, TOKEN_RECORD_RENT,
+    state::{AssetType, Converter},
+    ConvertError, FEES_WALLET, NIFTY_CONVERT_FEE, TOKEN_RECORD_RENT,
 };
 
 #[derive(Accounts)]
-pub struct ConvertCore<'info> {
-    #[account(
-        seeds = [b"program-config"],
-        bump = program_config.bump
-    )]
-    program_config: Account<'info, ProgramConfig>,
-
+pub struct ConvertNifty<'info> {
     #[account(
         mut,
         seeds = [
@@ -99,14 +98,14 @@ pub struct ConvertCore<'info> {
     associated_token_program: Program<'info, AssociatedToken>,
 
     /// CHECK constrained to single programId
-    #[account(address = CoreID)]
-    core_program: AccountInfo<'info>,
+    #[account(address = NiftyID)]
+    nifty_program: AccountInfo<'info>,
     /// CHECK: checked in CPI
     #[account(address = anchor_lang::solana_program::sysvar::instructions::ID)]
     sysvar_instructions: UncheckedAccount<'info>,
 }
 
-impl<'info> ConvertCore<'info> {
+impl<'info> ConvertNifty<'info> {
     fn burn_nft(&self) -> Result<()> {
         let metadata_program = &self.metadata_program.to_account_info();
         let metadata = &self.nft_metadata.as_ref().to_account_info();
@@ -143,14 +142,15 @@ impl<'info> ConvertCore<'info> {
         Ok(())
     }
 
-    pub fn mint_core_nft(&self) -> Result<()> {
+    pub fn mint_nifty_nft(&self) -> Result<()> {
         let converter = &self.converter.to_account_info();
         let nft_metadata = &self.nft_metadata;
         let asset = &self.new_mint.to_account_info();
         let collection = &self.new_collection_mint.to_account_info();
         let payer = &self.payer.to_account_info();
         let system_program = &self.system_program.to_account_info();
-        let core_program = &self.core_program.to_account_info();
+        let nifty_program = &self.nifty_program.to_account_info();
+        let update_authority = &self.update_authority.to_account_info();
 
         let authority_seeds = [
             &b"CONVERT"[..],
@@ -161,26 +161,32 @@ impl<'info> ConvertCore<'info> {
         let name = &nft_metadata.name;
         let uri = &nft_metadata.uri;
 
-        CoreCpiBuilder::new(core_program)
+        let mut metadata = MetadataBuilder::default();
+        metadata.set(Some(&nft_metadata.symbol), None, Some(&uri));
+        let metadata_data = metadata.data();
+
+        CreateCpiBuilder::new(nifty_program)
             .name(name.to_owned())
-            .uri(uri.to_owned())
-            .plugins(vec![])
+            .extensions(vec![ExtensionInput {
+                extension_type: ExtensionType::Metadata,
+                length: metadata_data.len() as u32,
+                data: Some(metadata_data),
+            }])
             .asset(asset)
-            .collection(Some(collection))
-            .authority(Some(converter))
-            .payer(payer)
-            .owner(Some(payer))
-            .system_program(system_program)
-            .log_wrapper(None)
+            .group(Some(collection))
+            .authority(update_authority, false)
+            .group_authority(Some(converter))
+            .payer(Some(payer))
+            .owner(payer)
+            .system_program(Some(system_program))
             .invoke_signed(&[&authority_seeds])?;
 
         Ok(())
     }
 }
 
-pub fn convert_core_handler(ctx: Context<ConvertCore>) -> Result<()> {
+pub fn convert_nifty_handler(ctx: Context<ConvertNifty>) -> Result<()> {
     let converter = &ctx.accounts.converter;
-    let program_config = &ctx.accounts.program_config;
     let fees_wallet = &ctx.accounts.fees_wallet;
     let nft_metadata = &ctx.accounts.nft_metadata;
 
@@ -208,15 +214,15 @@ pub fn convert_core_handler(ctx: Context<ConvertCore>) -> Result<()> {
         );
     }
 
-    if !matches!(converter.asset_type, AssetType::Core) {
+    if !matches!(converter.asset_type, AssetType::Nifty) {
         return err!(ConvertError::InvalidInstruction);
     }
 
     ctx.accounts.burn_nft()?;
-    ctx.accounts.mint_core_nft()?;
+    ctx.accounts.mint_nifty_nft()?;
 
     if !converter.free {
-        let mut fee = CORE_CONVERT_FEE;
+        let mut fee = NIFTY_CONVERT_FEE;
 
         if ctx.accounts.token_record.is_some() {
             fee = fee
@@ -224,7 +230,7 @@ pub fn convert_core_handler(ctx: Context<ConvertCore>) -> Result<()> {
                 .ok_or(ConvertError::ProgramAddError)?;
         }
 
-        if program_config.convert_fee > 0 {
+        if fee > 0 {
             let ix = anchor_lang::solana_program::system_instruction::transfer(
                 &ctx.accounts.payer.key(),
                 &fees_wallet.key(),

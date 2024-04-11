@@ -27,6 +27,7 @@ import { createCollection, createCoreCollection } from "./create-collection"
 import { MPL_TOKEN_AUTH_RULES_PROGRAM_ID } from "@metaplex-foundation/mpl-token-auth-rules"
 import { MPL_CORE_PROGRAM_ID, fetchCollectionV1, isRuleSet } from "@metaplex-foundation/mpl-core"
 import { Convert } from "../../target/types/convert"
+import { ASSET_PROGRAM_ID } from "@nifty-oss/asset"
 
 export async function init({
   user,
@@ -283,4 +284,106 @@ export async function closeConverter({
       sysvarInstructions: getSysvar("instructions"),
     })
     .rpc()
+}
+
+export async function closeNiftyConverter(user: KeypairSigner, converter: PublicKey) {
+  const program = programPaidBy(user)
+
+  const converterAccount = await program.account.converter.fetch(converter)
+  await program.methods
+    .closeNiftyConverter()
+    .accounts({
+      program: program.programId,
+      programData: null,
+      programConfig: findProgramConfigPda(),
+      converter,
+      collection: converterAccount.destinationCollection,
+      niftyProgram: ASSET_PROGRAM_ID,
+    })
+    .rpc()
+}
+
+export async function initNifty({
+  authority,
+  collection,
+  nftMint,
+  name,
+  description,
+  slug,
+  uri,
+  logo,
+  bg,
+  maxSize,
+}: {
+  authority: KeypairSigner
+  collection: PublicKey
+  nftMint: PublicKey
+  name: string
+  description: string
+  slug: string
+  uri: string
+  logo?: string
+  bg?: string
+  maxSize?: bigint
+}) {
+  const program = programPaidBy(authority)
+  const destinationCollection = generateSigner(umi)
+  await program.methods
+    .initNifty(
+      name,
+      description,
+      slug,
+      uri,
+      logo || null,
+      bg || null,
+      maxSize ? new anchor.BN(maxSize.toString()) : null
+    )
+    .accounts({
+      programConfig: findProgramConfigPda(),
+      converter: findConverterPda(collection),
+      nftMint: nftMint,
+      nftMetadata: findMetadataPda(umi, { mint: nftMint })[0],
+      collectionIdentifier: collection,
+      destinationCollection: destinationCollection.publicKey,
+      niftyProgram: ASSET_PROGRAM_ID,
+    })
+    .signers([toWeb3JsKeypair(destinationCollection)])
+    .rpc()
+}
+
+export async function convertNifty(user: KeypairSigner, converter: PublicKey, nft: DigitalAsset) {
+  const newMint = generateSigner(umi)
+  const program = programPaidBy(user)
+
+  const converterAccount = await program.account.converter.fetch(converter)
+  const collectionIdentifier = fromWeb3JsPublicKey(converterAccount.sourceCollection)
+
+  const collection = unwrapOptionRecursively(nft.metadata.collection)
+  const isCollection = collection && collection.verified
+
+  const isPnft = unwrapOptionRecursively(nft.metadata.tokenStandard) === TokenStandard.ProgrammableNonFungible
+  const tokenRecord = isPnft ? getTokenRecordPda(nft.publicKey, user.publicKey) : null
+
+  await program.methods
+    .convertNifty()
+    .accounts({
+      converter,
+      newMint: newMint.publicKey,
+      nftMint: nft.publicKey,
+      nftMetadata: nft.metadata.publicKey,
+      masterEdition: nft.edition.publicKey,
+      tokenRecord,
+      collectionMetadata: isCollection ? findMetadataPda(umi, { mint: collectionIdentifier })[0] : null,
+      nftSource: getTokenAccount(nft.publicKey, user.publicKey),
+      newCollectionMint: converterAccount.destinationCollection,
+      feesWallet: FEES_WALLET,
+      metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+      updateAuthority: converterAccount.authority,
+      sysvarInstructions: getSysvar("instructions"),
+      niftyProgram: ASSET_PROGRAM_ID,
+    })
+    .signers([toWeb3JsKeypair(newMint)])
+    .rpc()
+
+  return newMint.publicKey
 }

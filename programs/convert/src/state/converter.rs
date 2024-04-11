@@ -35,6 +35,8 @@ pub struct Converter {
     pub asset_type: AssetType,
     /// is this converter approved for use (1)
     pub approved: bool,
+    /// is this converter free to use for holders (1)
+    pub free: bool,
 }
 
 impl Converter {
@@ -49,6 +51,7 @@ impl Converter {
         + (1 + 4 + 52)
         + (1 + 4 + 52)
         + (1 + 4 + 50)
+        + 1
         + 1
         + 1
         + 1;
@@ -80,6 +83,7 @@ impl Converter {
             bump,
             asset_type,
             approved,
+            free: false,
         }
     }
 }

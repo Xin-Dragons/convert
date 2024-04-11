@@ -8,6 +8,7 @@ use instructions::*;
 pub const METAPLEX_RULE_SET: Pubkey = pubkey!("eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9");
 pub const FEES_WALLET: Pubkey = pubkey!("4dm8ndfR78PcQudJrS7TXM7R4qM3GAHpY87UtHnxovpa");
 pub const CORE_CONVERT_FEE: u64 = 5982000;
+pub const NIFTY_CONVERT_FEE: u64 = 6834720;
 pub const TOKEN_RECORD_RENT: u64 = 1447680;
 
 declare_id!("CNVRTNSn2fcmaVKRYRyXHFQaASXXDf1kvewfqTotve9c");
@@ -40,6 +41,19 @@ pub mod convert {
         init_core_handler(ctx, name, slug, uri, logo, bg)
     }
 
+    pub fn init_nifty(
+        ctx: Context<InitNifty>,
+        name: String,
+        description: String,
+        slug: String,
+        uri: String,
+        logo: Option<String>,
+        bg: Option<String>,
+        max_size: Option<u64>,
+    ) -> Result<()> {
+        init_nifty_handler(ctx, name, description, slug, uri, logo, bg, max_size)
+    }
+
     pub fn convert(ctx: Context<Convert>) -> Result<()> {
         convert_handler(ctx)
     }
@@ -48,12 +62,24 @@ pub mod convert {
         convert_core_handler(ctx)
     }
 
+    pub fn convert_nifty(ctx: Context<ConvertNifty>) -> Result<()> {
+        convert_nifty_handler(ctx)
+    }
+
     pub fn close_core_converter(ctx: Context<CloseCoreConverter>) -> Result<()> {
         close_core_converter_handler(ctx)
     }
 
+    pub fn close_nifty_converter(ctx: Context<CloseNiftyConverter>) -> Result<()> {
+        close_nifty_converter_handler(ctx)
+    }
+
     pub fn init_program_config(ctx: Context<InitProgramConfig>, convert_fee: u64) -> Result<()> {
         init_program_config_handler(ctx, convert_fee)
+    }
+
+    pub fn toggle_free_mode(ctx: Context<ToggleFreeMode>, is_free: bool) -> Result<()> {
+        toggle_free_mode_handler(ctx, is_free)
     }
 
     pub fn close_converter(ctx: Context<CloseConverter>) -> Result<()> {

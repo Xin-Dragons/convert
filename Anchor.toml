@@ -31,6 +31,9 @@ address = "eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9"
 [[test.validator.clone]]
 # Metaplex CORE
 address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
+[[test.validator.clone]]
+# Nifty Asset
+address = "AssetGtQBTSgm5s91d1RAQod5JmaZiJDxqsgtqrZud73"
 
 [test]
 upgradeable = true

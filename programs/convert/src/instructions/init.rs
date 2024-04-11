@@ -196,7 +196,7 @@ pub fn init_handler(
             .map(|authorization_rules| authorization_rules.to_account_info()),
     };
 
-    approve_metadata_delegate(delegate_accounts);
+    let _ = approve_metadata_delegate(delegate_accounts);
 
     let converter = &mut ctx.accounts.converter;
 

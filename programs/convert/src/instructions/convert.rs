@@ -324,20 +324,23 @@ pub fn convert_handler(ctx: Context<Convert>) -> Result<()> {
     ctx.accounts.burn_nft()?;
     ctx.accounts.mint_pnft()?;
 
-    if program_config.convert_fee > 0 {
-        let ix = anchor_lang::solana_program::system_instruction::transfer(
-            &ctx.accounts.payer.key(),
-            &fees_wallet.key(),
-            program_config.convert_fee,
-        );
+    if !converter.free {
+        if program_config.convert_fee > 0 {
+            let ix = anchor_lang::solana_program::system_instruction::transfer(
+                &ctx.accounts.payer.key(),
+                &fees_wallet.key(),
+                program_config.convert_fee,
+            );
 
-        anchor_lang::solana_program::program::invoke(
-            &ix,
-            &[
-                ctx.accounts.payer.to_account_info(),
-                fees_wallet.to_account_info(),
-            ],
-        )?;
+            anchor_lang::solana_program::program::invoke(
+                &ix,
+                &[
+                    ctx.accounts.payer.to_account_info(),
+                    fees_wallet.to_account_info(),
+                ],
+            )?;
+        }
     }
+
     Ok(())
 }

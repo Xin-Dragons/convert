@@ -1,6 +1,6 @@
 import { MPL_TOKEN_AUTH_RULES_PROGRAM_ID } from "@metaplex-foundation/mpl-token-auth-rules"
 import { DigitalAsset, TokenStandard, fetchDigitalAsset } from "@metaplex-foundation/mpl-token-metadata"
-import { isNone, publicKey, unwrapOptionRecursively } from "@metaplex-foundation/umi"
+import { isNone, isSome, publicKey, unwrapOptionRecursively } from "@metaplex-foundation/umi"
 import { Button, Input, Link as NextUiLink, Radio, RadioGroup, Switch } from "@nextui-org/react"
 import { Link } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
@@ -114,6 +114,18 @@ export default function Create() {
       try {
         const nftPubkey = publicKey(nftPk)
         const da = await fetchDigitalAsset(umi, nftPubkey)
+
+        const isCollection = isSome(da.metadata.collectionDetails)
+        if (isCollection) {
+          setExistingCollection(da)
+          setCollectionType("clone")
+          const {
+            data: { digitalAsset },
+          } = await axios.get<{ digitalAsset: DAS.GetAssetResponse }>(`/api/get-da-for-collection/${nftPk}`)
+          setSelectedNft(digitalAsset)
+          setNftPkError(null)
+          return
+        }
 
         const collection = unwrapOptionRecursively(da.metadata.collection)
         if (collection?.verified) {
