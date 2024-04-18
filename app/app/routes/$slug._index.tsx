@@ -20,6 +20,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@nextui-org/react"
+import { Asset, ExtensionType, fetchAsset, getExtension } from "@nifty-oss/asset"
 import { useOutletContext } from "@remix-run/react"
 import { useWallet } from "@solana/wallet-adapter-react"
 import { DAS } from "helius-sdk"
@@ -43,13 +44,18 @@ type CoreAssetWithJson = AssetV1 & {
   json: JsonMetadata
 }
 
+type WithJson<T> = T & {
+  json: JsonMetadata
+}
+
 export default function Convert() {
   const { removeNft } = useDigitalAssets()
-  const { convert, deleteConverter, toggleApproved, convertCore } = useTxs()
+  const { convert, deleteConverter, toggleApproved, convertCore, convertNifty } = useTxs()
   const [converter, setConverter] = useState(useOutletContext<ConverterWithPublicKey>())
   const [toBurn, setToBurn] = useState<DAS.GetAssetResponse | null>(null)
   const [pnft, setPnft] = useState<DigitalAssetWithJson | null>(null)
-  const [coreAsset, setCoreAsset] = useState<CoreAssetWithJson | null>(null)
+  const [coreAsset, setCoreAsset] = useState<WithJson<AssetV1> | null>(null)
+  const [niftyAsset, setNiftyAsset] = useState<WithJson<Asset> | null>(null)
   const program = useConvert()
   const wallet = useWallet()
   const umi = useUmi()
@@ -81,7 +87,9 @@ export default function Convert() {
     }
     const newMint = converter.account.assetType.pnft
       ? await convert(converter, toBurn)
-      : await convertCore(converter, toBurn)
+      : converter.account.assetType.core
+      ? await convertCore(converter, toBurn)
+      : await convertNifty(converter, toBurn)
     if (newMint) {
       if (converter.account.assetType.pnft) {
         const nft = await fetchDigitalAsset(umi, newMint)
@@ -90,11 +98,19 @@ export default function Convert() {
           ...nft,
           json,
         })
-      } else {
+      } else if (converter.account.assetType.core) {
         const coreAsset = await fetchAssetV1(umi, newMint)
         const json = await fetchJsonMetadata(umi, coreAsset.uri)
         setCoreAsset({
           ...coreAsset,
+          json,
+        })
+      } else {
+        const niftyAsset = await fetchAsset(umi, newMint)
+        const uri = getExtension(niftyAsset, ExtensionType.Metadata)?.uri
+        const json = await fetchJsonMetadata(umi, uri)
+        setNiftyAsset({
+          ...niftyAsset,
           json,
         })
       }
@@ -127,7 +143,7 @@ export default function Convert() {
         <Card className="md:w-1/2 w-full p-5">
           <CardHeader>
             <div className="flex justify-between items-center w-full gap-3">
-              <h2 className="font-bold text-2xl">Select NFT to burn</h2>
+              <h2 className="font-bold text-2xl">Legacy NFT</h2>
               <p>
                 <span className="font-bold uppercase text-xs">Source collection</span>
                 <CopyAddress className="justify-end">{converter.account.sourceCollection.toBase58()}</CopyAddress>
@@ -179,19 +195,24 @@ export default function Convert() {
               style={
                 {
                   "--image-url": `url('https://img-cdn.magiceden.dev/rs:fill:600:600:0:0/plain/${
-                    converter.account.assetType.pnft ? pnft?.json?.image : coreAsset?.json.image
+                    (pnft || coreAsset || niftyAsset)?.json.image
                   }')`,
                 } as any
               }
             >
               {pnft && (
-                <Chip className="absolute top-8 right-8" color="primary">
+                <Chip className="absolute top-8 right-8" color="primary" size="lg">
                   pNFT
                 </Chip>
               )}
               {coreAsset && (
-                <Chip className="absolute top-8 right-8" color="primary">
+                <Chip className="absolute top-8 right-8" color="primary" size="lg">
                   CORE
+                </Chip>
+              )}
+              {niftyAsset && (
+                <Chip className="absolute top-8 right-8" color="primary" size="lg">
+                  NIFTY
                 </Chip>
               )}
             </div>
@@ -205,14 +226,14 @@ export default function Convert() {
                   ) : (
                     <span>&nbsp;</span>
                   )
-                ) : coreAsset ? (
-                  coreAsset.name
+                ) : coreAsset || niftyAsset ? (
+                  (coreAsset || niftyAsset)!.name
                 ) : (
                   <span>&nbsp;</span>
                 )}
               </span>
-              {pnft || coreAsset ? (
-                <CopyAddress className="justify-center">{(pnft || coreAsset)!.publicKey}</CopyAddress>
+              {pnft || coreAsset || niftyAsset ? (
+                <CopyAddress className="justify-center">{(pnft || coreAsset || niftyAsset)!.publicKey}</CopyAddress>
               ) : (
                 <span>&nbsp;</span>
               )}

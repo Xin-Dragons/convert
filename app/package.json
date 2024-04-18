@@ -27,6 +27,7 @@
     "@metaplex-foundation/umi-uploader-irys": "^0.9.1",
     "@nextui-org/aria-utils": "^2.0.15",
     "@nextui-org/react": "^2.2.9",
+    "@nifty-oss/asset": "^0.3.0",
     "@remix-run/css-bundle": "^2.8.0",
     "@remix-run/node": "^2.8.0",
     "@remix-run/react": "^2.8.0",

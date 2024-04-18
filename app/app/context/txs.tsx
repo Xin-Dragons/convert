@@ -3,6 +3,7 @@ import { useConvert } from "./convert"
 import { fromWeb3JsInstruction, fromWeb3JsPublicKey } from "@metaplex-foundation/umi-web3js-adapters"
 import { CollectionType, ConverterWithPublicKey } from "~/types/types"
 import { UmiProvider, useUmi } from "./umi"
+import { ASSET_PROGRAM_ID, fetchAsset } from "@nifty-oss/asset"
 import {
   DigitalAsset,
   MPL_TOKEN_METADATA_PROGRAM_ID,
@@ -45,6 +46,7 @@ import { DAS } from "helius-sdk"
 import { FEES_WALLET } from "~/constants"
 import { MPL_CORE_PROGRAM_ID, fetchCollectionV1 } from "@metaplex-foundation/mpl-core"
 import { useDigitalAssets } from "./digital-assets"
+import BN from "bn.js"
 
 const Context = createContext<
   | {
@@ -52,6 +54,7 @@ const Context = createContext<
       deleteConverter: (converter: ConverterWithPublicKey) => Promise<void>
       convert: (converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) => Promise<PublicKey | undefined>
       convertCore: (converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) => Promise<PublicKey | undefined>
+      convertNifty: (converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) => Promise<PublicKey | undefined>
       createConverter: (props: {
         selectedNft: DAS.GetAssetResponse
         collectionType: CollectionType
@@ -72,6 +75,14 @@ const Context = createContext<
         ruleSet?: string
       ) => Promise<void>
       createCoreConverter: (props: {
+        selectedNft: DAS.GetAssetResponse
+        name: string
+        slug: string
+        logoFile: File | null
+        bgFile: File | null
+        existingCollection: DigitalAsset | null
+      }) => Promise<void>
+      createNiftyConverter: (props: {
         selectedNft: DAS.GetAssetResponse
         name: string
         slug: string
@@ -295,6 +306,78 @@ export function TxsProvider({ children }: PropsWithChildren) {
                 tokenRecord,
                 sysvarInstructions: getSysvar("instructions"),
                 coreProgram: MPL_CORE_PROGRAM_ID,
+              })
+              .instruction()
+          ),
+          bytesCreatedOnChain: 0,
+          signers: [umi.identity, newMint],
+        })
+
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel, 500_000)
+        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
+        return await sendAllTxsWithRetries(umi, program.provider.connection, signed, 1 + (txFee ? 1 : 0))
+      })
+
+      toast.promise(promise, {
+        loading: "Converting NFT",
+        success: "NFT converted successfully!",
+        error: (err) => displayErrorFromLog(err, "Error converting NFT"),
+      })
+
+      await promise
+
+      return newMint.publicKey
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function convertNifty(converter: ConverterWithPublicKey, toBurn: DAS.GetAssetResponse) {
+    try {
+      setLoading(true)
+      const newMint = generateSigner(umi)
+      if (!converter) {
+        throw new Error("No converter loaded")
+      }
+      if (!toBurn) {
+        throw new Error("No NFT selected")
+      }
+      const promise = Promise.resolve().then(async () => {
+        const destinationCollection = await fetchAsset(
+          umi,
+          fromWeb3JsPublicKey(converter.account.destinationCollection)
+        )
+        const collectionIdentifier = fromWeb3JsPublicKey(converter.account.sourceCollection)
+        const sourceCollection = await umi.rpc.getAccount(collectionIdentifier)
+        const isCollection = sourceCollection.exists && sourceCollection.owner === SPL_TOKEN_PROGRAM_ID
+
+        const toBurnDa = await fetchDigitalAsset(umi, publicKey(toBurn.id))
+
+        const isPnft =
+          unwrapOptionRecursively(toBurnDa.metadata.tokenStandard) === TokenStandard.ProgrammableNonFungible
+        const tokenRecord = isPnft ? getTokenRecordPda(umi, toBurnDa.publicKey, umi.identity.publicKey) : null
+
+        const tx = transactionBuilder().add({
+          instruction: fromWeb3JsInstruction(
+            await program.methods
+              .convertNifty()
+              .accounts({
+                converter: converter.publicKey,
+                feesWallet: FEES_WALLET,
+                nftMint: toBurnDa.publicKey,
+                nftSource: getTokenAccount(umi, toBurnDa.publicKey, umi.identity.publicKey),
+                nftMetadata: toBurnDa.metadata.publicKey,
+                masterEdition: toBurnDa.edition?.publicKey,
+                collectionMetadata: isCollection ? findMetadataPda(umi, { mint: collectionIdentifier })[0] : null,
+                newMint: newMint.publicKey,
+                updateAuthority: converter.account.authority,
+                newCollectionMint: destinationCollection.publicKey,
+                metadataProgram: MPL_TOKEN_METADATA_PROGRAM_ID,
+                tokenRecord,
+                sysvarInstructions: getSysvar("instructions"),
+                niftyProgram: ASSET_PROGRAM_ID,
               })
               .instruction()
           ),
@@ -615,6 +698,99 @@ export function TxsProvider({ children }: PropsWithChildren) {
     }
   }
 
+  async function createNiftyConverter({
+    selectedNft,
+    name,
+    slug,
+    logoFile,
+    bgFile,
+    existingCollection,
+  }: {
+    selectedNft: DAS.GetAssetResponse
+    name: string
+    slug: string
+    logoFile: File | null
+    bgFile: File | null
+    existingCollection: DigitalAsset | null
+  }) {
+    try {
+      setLoading(true)
+      const promise = Promise.resolve().then(async () => {
+        let logo = null
+        let bg = null
+        if (logoFile || bgFile) {
+          const uploadPromise = uploadFiles(umi, logoFile, bgFile)
+
+          toast.promise(uploadPromise, {
+            loading: "Uploading assets",
+            success: "Uploaded successfully",
+            error: "Error uploading files",
+          })
+
+          const res = await uploadPromise
+          logo = res.logo
+          bg = res.bg
+        }
+
+        const collectionIdentifier = existingCollection?.publicKey
+        const converter = findConverterPda(umi, collectionIdentifier!)
+        const uri = existingCollection?.metadata.uri!
+        const description = (await fetchJsonMetadata(umi, uri)).description
+        const da = await fetchDigitalAsset(umi, publicKey(selectedNft.id))
+        const destinationCollection = generateSigner(umi)
+        const collectionDetails = unwrapOptionRecursively(existingCollection?.metadata.collectionDetails)
+
+        const tx = transactionBuilder().add({
+          instruction: fromWeb3JsInstruction(
+            await program.methods
+              .initNifty(
+                name,
+                description || "",
+                slug,
+                uri,
+                logo,
+                bg,
+                collectionDetails?.__kind === "V1"
+                  ? collectionDetails.size
+                    ? new BN(collectionDetails.size.toString())
+                    : null
+                  : null
+              )
+              .accounts({
+                programConfig: findProgramConfigPda(umi),
+                converter,
+                collectionIdentifier,
+                nftMint: da.publicKey,
+                nftMetadata: da.metadata.publicKey,
+                destinationCollection: destinationCollection.publicKey,
+                authority: umi.identity.publicKey,
+                niftyProgram: ASSET_PROGRAM_ID,
+              })
+              .instruction()
+          ),
+          bytesCreatedOnChain: 0,
+          signers: [umi.identity, destinationCollection],
+        })
+
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
+        const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
+        return await sendAllTxsWithRetries(umi, program.provider.connection, signed, txFee ? 1 : 0)
+      })
+
+      toast.promise(promise, {
+        loading: "Creating Core converter",
+        success: "Core converter created",
+        error: (err) => displayErrorFromLog(err, "Error creating Core converter"),
+      })
+      await promise
+      navigate(`/${slug}`)
+    } catch (err: any) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <Context.Provider
       value={{
@@ -625,7 +801,9 @@ export function TxsProvider({ children }: PropsWithChildren) {
         toggleApproved,
         update,
         createCoreConverter,
+        createNiftyConverter,
         convertCore,
+        convertNifty,
       }}
     >
       {children}

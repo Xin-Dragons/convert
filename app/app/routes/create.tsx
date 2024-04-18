@@ -25,7 +25,7 @@ import { AssetType, CollectionType } from "~/types/types"
 export default function Create() {
   const wallet = useWallet()
   const { theme, setTheme } = useTheme()
-  const { loading, createConverter, createCoreConverter } = useTxs()
+  const { loading, createConverter, createCoreConverter, createNiftyConverter } = useTxs()
   const [slug, setSlug] = useState("")
   const [name, setName] = useState("")
   const umi = useUmi()
@@ -43,7 +43,7 @@ export default function Create() {
   const [collection, setCollection] = useState<DigitalAsset | null>(null)
   const [existingCollection, setExistingCollection] = useState<DigitalAsset | null>(null)
   const [collectionType, setCollectionType] = useState<CollectionType>("existing")
-  const [assetType, setAssetType] = useState<AssetType>(AssetType.CORE)
+  const [assetType, setAssetType] = useState<AssetType>(AssetType.NIFTY)
 
   async function create() {
     if (!selectedNft) {
@@ -65,6 +65,16 @@ export default function Create() {
     } else if (assetType === AssetType.CORE) {
       console.log("creating core converter")
       await createCoreConverter({
+        selectedNft,
+        name,
+        slug,
+        logoFile,
+        bgFile,
+        existingCollection,
+      })
+    } else if (assetType === AssetType.NIFTY) {
+      console.log("creating core converter")
+      await createNiftyConverter({
         selectedNft,
         name,
         slug,
@@ -346,21 +356,41 @@ export default function Create() {
                     </p>
                   )}
                 </div>
-
                 <RadioGroup
                   label="Output asset type"
                   value={assetType}
                   onValueChange={(val) => setAssetType(val as AssetType)}
                   orientation="horizontal"
+                  className="w-full flex"
                 >
-                  <CustomRadio value={AssetType.CORE}>Metaplex Core</CustomRadio>
-                  <CustomRadio value={AssetType.PNFT}>Metaplex pNFT</CustomRadio>
+                  <CustomRadio value={AssetType.NIFTY} className="flex-1">
+                    <div className="flex flex-col gap-3 items-center justify-center">
+                      <img src="/nifty-dark.png" />
+                      <span>Nifty OSS</span>
+                    </div>
+                  </CustomRadio>
+                  <CustomRadio value={AssetType.CORE} className="flex-1">
+                    <div className="flex flex-col gap-3 items-center justify-center">
+                      <img src="/metaplex.png" />
+                      <span>Metaplex Core</span>
+                    </div>
+                  </CustomRadio>
+                  <CustomRadio value={AssetType.PNFT} className="flex-1">
+                    Metaplex pNFT
+                  </CustomRadio>
                 </RadioGroup>
 
                 {assetType === AssetType.CORE && (
                   <p className="text-xs">
-                    A new Core collection will be created to group together the newly minted Core assets. This will be
-                    owned by the <Title /> program until the conversion process is concluded.
+                    A new Core collection will be created to group together the newly minted Core assets. The <Title />{" "}
+                    program will be an update delegate until the conversion process is concluded.
+                  </p>
+                )}
+
+                {assetType === AssetType.NIFTY && (
+                  <p className="text-xs">
+                    A new Nifty group will be created to group together the newly minted Nifty assets. The <Title />{" "}
+                    program will be a grouping delegate until the conversion process is concluded.
                   </p>
                 )}
 
@@ -403,10 +433,20 @@ export default function Create() {
                         !existingCollection ||
                         existingCollection.metadata.updateAuthority !== wallet.publicKey.toBase58()
                       }
+                      description={
+                        !existingCollection
+                          ? "No existing collection"
+                          : existingCollection.metadata.updateAuthority !== wallet.publicKey.toBase58() &&
+                            "Update authority mismatch"
+                      }
                     >
                       Use existing collection
                     </Radio>
-                    <Radio value="clone" isDisabled={!existingCollection}>
+                    <Radio
+                      value="clone"
+                      isDisabled={!existingCollection}
+                      description={!existingCollection && "No existing collection"}
+                    >
                       Clone into new collection
                     </Radio>
                     <Radio value="new">Provide new collection</Radio>
@@ -483,6 +523,33 @@ export default function Create() {
                     }
                   />
                 )}
+
+                <h3>
+                  Cost per asset:{" "}
+                  <span className="text-primary font-bold">
+                    {[AssetType.CORE, AssetType.NIFTY].includes(assetType) ? "FREE*" : "0.0279 SOL per mint*"}
+                  </span>
+                </h3>
+
+                {[AssetType.CORE, AssetType.NIFTY].includes(assetType) ? (
+                  <p className="text-xs text-primary">
+                    * The cost of minting the new asset class is less than the reclaimed rent from burning the legacy
+                    item. Holders will pay nothing, and the program will withold the excess rent from burning (
+                    {assetType === AssetType.CORE ? "0.00598 SOL" : "0.00683 SOL"}).
+                  </p>
+                ) : (
+                  <p className="text-xs text-primary">
+                    * Paid by the holder per burn/mint. This is made up from the increased rent for the new account, a
+                    0.01 SOL Metaplex minting fee, plus a platform fee of 0.015 SOL, minus the rent reclaimed from
+                    burning the asset
+                  </p>
+                )}
+
+                <p className="text-xs">
+                  This platform fee can be covered by the project, if you wish to pay this fee for your holders then
+                  please <NextUiLink href="https://discord.gg/mybaKJtX2B">open a ticket</NextUiLink> in our discord
+                  after creating your converter.
+                </p>
               </div>
             )}
 

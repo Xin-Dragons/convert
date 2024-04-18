@@ -200,6 +200,92 @@
       ]
     },
     {
+      "name": "initNifty",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadata",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "collectionIdentifier",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "destinationCollection",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "niftyProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "slug",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "logo",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "bg",
+          "type": {
+            "option": "string"
+          }
+        },
+        {
+          "name": "maxSize",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
       "name": "convert",
       "accounts": [
         {
@@ -428,6 +514,107 @@
       "args": []
     },
     {
+      "name": "convertNifty",
+      "accounts": [
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "feesWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "nftMetadata",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "masterEdition",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenRecord",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collectionMetadata",
+          "isMut": true,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "nftSource",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "newMint",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "newCollectionMint",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "metadataProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "niftyProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "CHECK constrained to single programId"
+          ]
+        },
+        {
+          "name": "sysvarInstructions",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "closeCoreConverter",
       "accounts": [
         {
@@ -476,6 +663,54 @@
       "args": []
     },
     {
+      "name": "closeNiftyConverter",
+      "accounts": [
+        {
+          "name": "programConfig",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false,
+          "isOptional": true
+        },
+        {
+          "name": "collection",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "niftyProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initProgramConfig",
       "accounts": [
         {
@@ -508,6 +743,37 @@
         {
           "name": "convertFee",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "toggleFreeMode",
+      "accounts": [
+        {
+          "name": "converter",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "isFree",
+          "type": "bool"
         }
       ]
     },
@@ -820,6 +1086,13 @@
             "name": "approved",
             "docs": [
               "is this converter approved for use (1)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "free",
+            "docs": [
+              "is this converter free to use for holders (1)"
             ],
             "type": "bool"
           }
