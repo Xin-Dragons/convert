@@ -190,28 +190,6 @@ export default function ConverterAdmin() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 bg-content2 p-3 rounded-xl">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl">Destination collection</h3>
-                {collection && (
-                  <p className="text-primary">
-                    {converter.account.assetType.core
-                      ? (collection as CollectionV1).name
-                      : (collection as DigitalAsset).metadata.name}
-                  </p>
-                )}
-              </div>
-              <p className="text-xs">
-                Converted {converter.account.assetType.pnft ? "pNFTs" : "Core assets"} will be minted into this
-                collection. This cannot be updated. To change the collection you will need to delete this converter and
-                create a new one
-              </p>
-
-              <h3>
-                <CopyAddress>{collection?.publicKey}</CopyAddress>
-              </h3>
-            </div>
-
             {converter.account.assetType.pnft && (
               <Input
                 label="Rule set"
