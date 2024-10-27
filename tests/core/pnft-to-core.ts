@@ -135,13 +135,15 @@ describe("Core - pNFT", () => {
     const burningProceeds =
       tokenAccBalBefore + metadataAccBalanceBefore + masterEditionBalanceBefore + tokenRecordBalanceBefore
 
-    assert.equal(userBalBefore.basisPoints - userBalAfter.basisPoints, 5000n * 2n, "Expected to pay 2x tx fee")
+    console.log(assetBalance + sol(0.01).basisPoints + 5000n * 2n - burningProceeds)
 
     assert.equal(
-      feesBalanceAfter - feesBalanceBefore,
-      burningProceeds - assetBalance,
-      "Expected fees wallet to receive the difference"
+      userBalBefore.basisPoints - userBalAfter.basisPoints,
+      assetBalance + sol(0.01).basisPoints + 5000n * 2n - burningProceeds,
+      "Expected to pay 2x tx fee"
     )
+
+    assert.equal(feesBalanceAfter - feesBalanceBefore, 10000000n, "Expected fees wallet to receive the fee")
 
     const collection = await fetchCollectionV1(umi, fromWeb3JsPublicKey(converterAccount.destinationCollection))
     assert.equal(collection.numMinted, 1, "Expected num minted to be 1")

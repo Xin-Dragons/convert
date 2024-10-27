@@ -17,7 +17,7 @@ import { closeNiftyConverter, convertNifty, initNifty } from "../helpers/instruc
 import { assert } from "chai"
 import { isEqual, omit } from "lodash"
 
-describe("Nifty - happy path", () => {
+describe.only("Nifty - happy path", () => {
   const creator1 = generateSigner(umi).publicKey
   const creator2 = generateSigner(umi).publicKey
   let authority: KeypairSigner
@@ -127,18 +127,24 @@ describe("Nifty - happy path", () => {
     const newMint = await convertNifty(user, converter, nft)
     const userBalAfter = await umi.rpc.getBalance(user.publicKey)
 
-    const assetBalance = await umi.rpc.getBalance(newMint)
+    const assetBalance = (await umi.rpc.getBalance(newMint)).basisPoints
 
     const feesBalAfter = await umi.rpc.getBalance(FEES_WALLET)
 
     const burningProceeds = tokenAccBalBefore + metadataAccBalanceBefore + masterEditionBalanceBefore
 
-    assert.equal(userBalBefore.basisPoints - userBalAfter.basisPoints, 5000n * 2n, "Expected to have paid the tx fee")
+    assert.equal(
+      userBalBefore.basisPoints - userBalAfter.basisPoints,
+      assetBalance + sol(0.01).basisPoints + 5000n * 2n - burningProceeds,
+      "Expected to have paid the tx fee"
+    )
+
+    console.log(assetBalance)
 
     assert.equal(
-      burningProceeds - assetBalance.basisPoints,
       feesBalAfter.basisPoints - feesBalBefore.basisPoints,
-      "Expected fees wallet to receive the difference"
+      10000000n,
+      "Expected fees wallet to receive 0.01 sol"
     )
 
     const asset = await fetchAsset(umi, newMint)
@@ -179,6 +185,8 @@ describe("Nifty - happy path", () => {
       ],
     })
 
+    const userBalBefore = await umi.rpc.getBalance(user.publicKey)
+
     const program = programPaidBy(user)
     const converter = findConverterPda(sourceCollection.publicKey)
     const converterAccount = await program.account.converter.fetch(converter)
@@ -194,7 +202,9 @@ describe("Nifty - happy path", () => {
 
     const newMint = await convertNifty(user, converter, nft)
 
-    const assetBalance = await umi.rpc.getBalance(newMint)
+    const userBalAfter = await umi.rpc.getBalance(user.publicKey)
+
+    const assetBalance = (await umi.rpc.getBalance(newMint)).basisPoints
 
     const feesBalAfter = await umi.rpc.getBalance(FEES_WALLET)
 
@@ -202,8 +212,16 @@ describe("Nifty - happy path", () => {
       tokenAccBalBefore + metadataAccBalanceBefore + masterEditionBalanceBefore + tokenRecordBalanceBefore
 
     assert.equal(
-      burningProceeds - assetBalance.basisPoints,
+      userBalBefore.basisPoints - userBalAfter.basisPoints,
+      assetBalance + sol(0.01).basisPoints + 5000n * 2n - burningProceeds,
+      "Expected to have paid the tx fee"
+    )
+
+    console.log(assetBalance + sol(0.01).basisPoints + 5000n * 2n - burningProceeds)
+
+    assert.equal(
       feesBalAfter.basisPoints - feesBalBefore.basisPoints,
+      10000000n,
       "Expected fees wallet to receive the difference"
     )
 

@@ -180,38 +180,18 @@ export async function sendAllTxsWithRetries(
   let successes = 0
   let errors = 0
 
-  const lastValidBlockHeight = (await umi.rpc.getLatestBlockhash()).lastValidBlockHeight
-  let blockheight = await connection.getBlockHeight("confirmed")
   let blockhash = await umi.rpc.getLatestBlockhash()
 
   await Promise.all(
     signed.map(async (tx) => {
-      const sig = await umi.rpc.sendTransaction(tx)
-      let resolved = false
-      const confPromise = umi.rpc.confirmTransaction(sig, {
+      const sig = await umi.rpc.sendTransaction(tx, { skipPreflight: true, commitment: "processed" })
+      const conf = await umi.rpc.confirmTransaction(sig, {
         strategy: {
           type: "blockhash",
           ...blockhash,
         },
         commitment: "confirmed",
       })
-
-      while (blockheight < lastValidBlockHeight && !resolved) {
-        try {
-          console.log("Sending tx")
-          await umi.rpc.sendTransaction(tx)
-          await sleep(delay)
-        } catch (err: any) {
-          if (err.message.includes("This transaction has already been processed")) {
-            resolved = true
-          } else {
-            console.error(displayErrorFromLog(err, err.message || "Error sending tx"))
-          }
-        }
-        blockheight = await connection.getBlockHeight()
-      }
-
-      const conf = await confPromise
 
       if (conf.value.err) {
         errors += tx.message.instructions.length - preIxs

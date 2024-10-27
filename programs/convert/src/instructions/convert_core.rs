@@ -12,7 +12,7 @@ use mpl_core::{instructions::CreateV1CpiBuilder as CoreCpiBuilder, ID as CoreID}
 
 use crate::{
     state::{AssetType, Converter, ProgramConfig},
-    ConvertError, CORE_CONVERT_FEE, FEES_WALLET, TOKEN_RECORD_RENT,
+    ConvertError, CORE_CONVERT_FEE, FEES_WALLET,
 };
 
 #[derive(Accounts)]
@@ -216,13 +216,7 @@ pub fn convert_core_handler(ctx: Context<ConvertCore>) -> Result<()> {
     ctx.accounts.mint_core_nft()?;
 
     if !converter.free {
-        let mut fee = CORE_CONVERT_FEE;
-
-        if ctx.accounts.token_record.is_some() {
-            fee = fee
-                .checked_add(TOKEN_RECORD_RENT)
-                .ok_or(ConvertError::ProgramAddError)?;
-        }
+        let fee = CORE_CONVERT_FEE;
 
         if program_config.convert_fee > 0 {
             let ix = anchor_lang::solana_program::system_instruction::transfer(

@@ -6,7 +6,7 @@ import { FEES_WALLET, findConverterPda, getTokenAccount } from "../helpers/pdas"
 import { adminProgram, createNewUser, programPaidBy } from "../helper"
 import { createNft } from "../helpers/create-nft"
 import { KeypairSigner, PublicKey, generateSigner, sol, unwrapOptionRecursively } from "@metaplex-foundation/umi"
-import { assert } from "chai"
+import { assert, use } from "chai"
 import { fromWeb3JsPublicKey } from "@metaplex-foundation/umi-web3js-adapters"
 import { isEqual } from "lodash"
 import { assertErrorCode, expectFail } from "../helpers/utils"
@@ -156,13 +156,17 @@ describe("Core - With collection", () => {
 
     const burningProceeds = tokenAccBalBefore + metadataAccBalanceBefore + masterEditionBalanceBefore
 
-    assert.equal(userBalBefore.basisPoints - userBalAfter.basisPoints, 5000n * 2n, "Expected to pay 2x tx fee")
+    const fee = sol(0.01).basisPoints
+
+    console.log(assetBalance + fee + 5000n * 2n - burningProceeds)
 
     assert.equal(
-      feesBalanceAfter - feesBalanceBefore,
-      burningProceeds - assetBalance,
-      "Expected fees wallet to receive the difference"
+      userBalBefore.basisPoints - userBalAfter.basisPoints,
+      assetBalance + fee + 5000n * 2n - burningProceeds,
+      "Expected to pay 2x tx fee, plus 0.01 SOL fee, plus cost of minting, minus burn proceeds"
     )
+
+    assert.equal(feesBalanceAfter - feesBalanceBefore, 10000000n, "Expected fees wallet to receive 0.01 sol")
 
     const collection = await fetchCollectionV1(umi, fromWeb3JsPublicKey(converterAccount.destinationCollection))
     assert.equal(collection.numMinted, 1, "Expected num minted to be 1")

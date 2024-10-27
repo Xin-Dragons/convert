@@ -17,7 +17,7 @@ use nifty_asset::{
 
 use crate::{
     state::{AssetType, Converter},
-    ConvertError, FEES_WALLET, NIFTY_CONVERT_FEE, TOKEN_RECORD_RENT,
+    ConvertError, FEES_WALLET, NIFTY_CONVERT_FEE,
 };
 
 #[derive(Accounts)]
@@ -162,7 +162,7 @@ impl<'info> ConvertNifty<'info> {
         let uri = &nft_metadata.uri;
 
         let mut metadata = MetadataBuilder::default();
-        metadata.set(Some(&nft_metadata.symbol), None, Some(&uri));
+        metadata.set(Some(&nft_metadata.symbol), None, Some(&uri), None);
         let metadata_data = metadata.data();
 
         CreateCpiBuilder::new(nifty_program)
@@ -222,13 +222,7 @@ pub fn convert_nifty_handler(ctx: Context<ConvertNifty>) -> Result<()> {
     ctx.accounts.mint_nifty_nft()?;
 
     if !converter.free {
-        let mut fee = NIFTY_CONVERT_FEE;
-
-        if ctx.accounts.token_record.is_some() {
-            fee = fee
-                .checked_add(TOKEN_RECORD_RENT)
-                .ok_or(ConvertError::ProgramAddError)?;
-        }
+        let fee = NIFTY_CONVERT_FEE;
 
         if fee > 0 {
             let ix = anchor_lang::solana_program::system_instruction::transfer(

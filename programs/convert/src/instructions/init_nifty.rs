@@ -119,7 +119,12 @@ pub fn init_nifty_handler(
     let grouping_data = grouping.data();
 
     let mut metadata = MetadataBuilder::default();
-    metadata.set(Some(&nft_metadata.symbol), Some(&description), Some(&uri));
+    metadata.set(
+        Some(&nft_metadata.symbol),
+        Some(&description),
+        Some(&uri),
+        None,
+    );
     let metadata_data = metadata.data();
 
     let mut royalties = RoyaltiesBuilder::default();

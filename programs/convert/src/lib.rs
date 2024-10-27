@@ -7,9 +7,8 @@ use instructions::*;
 
 pub const METAPLEX_RULE_SET: Pubkey = pubkey!("eBJLFYPxJmMGKuFwpDWkzxZeUrad92kZRC5BJLpzyT9");
 pub const FEES_WALLET: Pubkey = pubkey!("4dm8ndfR78PcQudJrS7TXM7R4qM3GAHpY87UtHnxovpa");
-pub const CORE_CONVERT_FEE: u64 = 5982000;
-pub const NIFTY_CONVERT_FEE: u64 = 6834720;
-pub const TOKEN_RECORD_RENT: u64 = 1447680;
+pub const CORE_CONVERT_FEE: u64 = 10000000;
+pub const NIFTY_CONVERT_FEE: u64 = 10000000;
 
 declare_id!("CNVRTNSn2fcmaVKRYRyXHFQaASXXDf1kvewfqTotve9c");
 
