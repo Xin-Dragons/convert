@@ -30,7 +30,7 @@ export function NftSelector({
         className={`group aspect-square rounded-xl border-3 border-white flex items-center justify-center bg-[image:var(--image-url)] bg-no-repeat bg-contain`}
         style={
           {
-            "--image-url": `url('https://img-cdn.magiceden.dev/rs:fill:600:600:0:0/plain/${selected?.content?.links?.image}')`,
+            "--image-url": `url('https://image.solanatracker.io/proxy?url=${selected?.content?.links?.image}')`,
           } as any
         }
       >

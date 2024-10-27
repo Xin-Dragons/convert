@@ -45,7 +45,7 @@ export async function getConverterFromSlug(slug: string) {
 }
 
 export function imageCdn(src: string, w: number = 400, h: number = 400) {
-  return `https://img-cdn.magiceden.dev/rs:fill:${w || ""}:${h || ""}:0:0/plain/${src}`
+  return `https://image.solanatracker.io/proxy?url=${src}`
 }
 
 export async function getEntrantsArray(umi: Umi, entrantsPk: PublicKey) {
