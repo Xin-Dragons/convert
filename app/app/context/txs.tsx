@@ -163,7 +163,14 @@ export function TxsProvider({ children }: PropsWithChildren) {
 
         const { chunks, txFee } = await packTx(umi, tx, feeLevel)
         const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
-        return await sendAllTxsWithRetries(umi, program.provider.connection, signed, txFee ? 1 : 0)
+        const { successes, errors } = await sendAllTxsWithRetries(
+          umi,
+          program.provider.connection,
+          signed,
+          txFee ? 1 : 0
+        )
+        console.log({ successes, errors })
+        return { successes, errors }
       })
 
       toast.promise(promise, {
