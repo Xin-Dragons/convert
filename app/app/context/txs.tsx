@@ -161,7 +161,7 @@ export function TxsProvider({ children }: PropsWithChildren) {
           })
         }
 
-        const { chunks, txFee } = await packTx(umi, tx, feeLevel)
+        const { chunks, txFee } = await packTx(umi, tx, feeLevel, 150_000)
         const signed = await Promise.all(chunks.map((c) => c.buildAndSign(umi)))
         const { successes, errors } = await sendAllTxsWithRetries(
           umi,
