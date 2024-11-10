@@ -194,6 +194,8 @@ export async function sendAllTxsWithRetries(
       })
 
       if (conf.value.err) {
+        console.error(conf.value.err)
+        throw conf.value.err
         errors += tx.message.instructions.length - preIxs
       } else {
         successes += tx.message.instructions.length - preIxs
