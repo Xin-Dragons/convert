@@ -159,6 +159,25 @@ export function TxsProvider({ children }: PropsWithChildren) {
             bytesCreatedOnChain: 0,
             signers: [umi.identity],
           })
+        } else if (converter.account.assetType.nifty) {
+          const isUa = converter.account.authority.toBase58() === umi.identity.publicKey
+          tx = tx.add({
+            instruction: fromWeb3JsInstruction(
+              await program.methods
+                .closeNiftyConverter()
+                .accounts({
+                  programConfig: findProgramConfigPda(umi),
+                  program: isUa ? null : program.programId,
+                  programData: isUa ? null : findProgramDataAddress(umi),
+                  converter: converter.publicKey,
+                  collection: converter.account.destinationCollection,
+                  niftyProgram: ASSET_PROGRAM_ID,
+                })
+                .instruction()
+            ),
+            bytesCreatedOnChain: 0,
+            signers: [umi.identity],
+          })
         }
 
         const { chunks, txFee } = await packTx(umi, tx, feeLevel, 150_000)
@@ -170,6 +189,11 @@ export function TxsProvider({ children }: PropsWithChildren) {
           txFee ? 1 : 0
         )
         console.log({ successes, errors })
+
+        if (errors) {
+          throw new Error("")
+        }
+
         return { successes, errors }
       })
 
